@@ -36,6 +36,8 @@ services:
       context: ..
       dockerfile: api/Dockerfile
     environment:
+      APP_ENV: ${APP_ENV:-production}
+      PUBLIC_APP_URL: ${PUBLIC_APP_URL:?Defina PUBLIC_APP_URL}
       DATABASE_URL: postgres://certguard:${POSTGRES_PASSWORD}@db:5432/certguard?sslmode=disable
     networks: [database, app]
     depends_on:

@@ -1,0 +1,50 @@
+import { expect, test } from "@playwright/test";
+test("administrador cadastra, edita, pausa e arquiva endpoint sem acessar destinos externos", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.getByLabel("E-mail", { exact: true }).fill("admin@example.com");
+  await page
+    .getByLabel("Senha", { exact: true })
+    .fill("Senha-E2E-descartavel-123");
+  await page.getByRole("button", { name: "Entrar", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "Endpoints TLS" }),
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: "Adicionar endpoint", exact: true })
+    .click();
+  await page.getByLabel("Nome", { exact: true }).fill("Exemplo E2E");
+  await page.getByLabel("Hostname", { exact: true }).fill("example.com");
+  await page.getByRole("button", { name: "Salvar", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "Exemplo E2E", exact: true }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Editar", exact: true }).click();
+  await page.getByLabel("Nome", { exact: true }).fill("Exemplo atualizado");
+  await page.getByRole("button", { name: "Salvar", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "Exemplo atualizado", exact: true }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Pausar", exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: "Verificar agora", exact: true }),
+  ).toBeDisabled();
+  await page.getByRole("button", { name: "Histórico", exact: true }).click();
+  await expect(
+    page.getByText("Nenhuma verificação nesta página.", { exact: true }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Arquivar", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Confirmar arquivamento", exact: true })
+    .click();
+  await expect(
+    page.getByText("Endpoint arquivado; histórico preservado.", {
+      exact: true,
+    }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Sair", exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: "Entrar", exact: true }),
+  ).toBeVisible();
+});
