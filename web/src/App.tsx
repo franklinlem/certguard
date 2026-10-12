@@ -164,7 +164,7 @@ export function App() {
           <span aria-hidden="true">◈</span> CertGuard
         </a>
         <div className="header-actions">
-          <span className="phase">Verificações manuais</span>
+          <span className="phase">Monitoramento TLS</span>
           {session && (
             <button
               disabled={busy}
@@ -259,8 +259,12 @@ export function App() {
             </button>
           </section>
           <p className="message">
-            As verificações são manuais nesta etapa. O agendamento e os alertas
-            ainda não estão ativos.
+            {session.background?.scheduler_enabled
+              ? "Agendamento habilitado. Atualize a lista para consultar as próximas execuções."
+              : "Agendamento desabilitado neste ambiente. Use a verificação manual."}{" "}
+            Os alertas ainda não estão ativos.
+            {session.background?.retention_enabled &&
+              ` Resultados com mais de ${session.background.retention_days} dias são removidos gradualmente, preservando o último de cada endpoint.`}
           </p>
           {editing && (
             <section className="panel" aria-labelledby="form-title">
@@ -314,7 +318,7 @@ export function App() {
                   />
                 </label>
                 <label>
-                  Intervalo futuro (minutos)
+                  Intervalo entre verificações (minutos)
                   <input
                     name="interval_minutes"
                     type="number"
@@ -363,6 +367,12 @@ export function App() {
                     </p>
                     <p className="hint">
                       Última verificação: {date(ep.last_check_at)}
+                    </p>
+                    <p className="hint">
+                      Próxima execução prevista:{" "}
+                      {ep.enabled && session.background?.scheduler_enabled
+                        ? date(ep.next_check_at)
+                        : "Agendamento pausado"}
                     </p>
                   </div>
                   <div className="actions">

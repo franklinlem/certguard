@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/franklinlem/certguard/api/internal/certificate"
 	"github.com/franklinlem/certguard/api/internal/httpapi"
+	"github.com/franklinlem/certguard/api/internal/scheduler"
 	"github.com/franklinlem/certguard/api/internal/storage"
 	"github.com/franklinlem/certguard/api/migrations"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -99,10 +100,35 @@ func run() error {
 		slog.Info("administrador inicial criado")
 		return nil
 	}
+	cfg, err := scheduler.Load(os.Getenv)
+	if err != nil {
+		return err
+	}
 	app, err := httpapi.NewApp(&storage.Store{Pool: pool}, os.Getenv("PUBLIC_APP_URL"), os.Getenv("APP_ENV") == "development")
 	if err != nil {
 		return err
 	}
+	app.Background = cfg
+	if cfg.Enabled || cfg.RetentionEnabled {
+		pc, err := pgxpool.ParseConfig(url)
+		if err != nil {
+			return fmt.Errorf("configuração PostgreSQL inválida")
+		}
+		pc.MaxConns = int32(cfg.Workers + 1)
+		backgroundPool, err := pgxpool.NewWithConfig(ctx, pc)
+		if err != nil {
+			return fmt.Errorf("pool de agendamento indisponível")
+		}
+		defer backgroundPool.Close()
+		backgroundCtx, cancel := context.WithCancel(ctx)
+		finished := make(chan struct{})
+		go func() {
+			defer close(finished)
+			_ = scheduler.Run(backgroundCtx, &storage.Store{Pool: backgroundPool}, cfg)
+		}()
+		defer func() { cancel(); <-finished }()
+	}
+	slog.Info("configuração de tarefas", "agendamento", cfg.Enabled, "workers", cfg.Workers, "retenção", cfg.RetentionEnabled)
 	server := &http.Server{Addr: ":8080", Handler: app.Handler(), ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 10 * time.Second, WriteTimeout: 20 * time.Second, IdleTimeout: 30 * time.Second, MaxHeaderBytes: 16384}
 	done := make(chan error, 1)
 	go func() { done <- server.ListenAndServe() }()

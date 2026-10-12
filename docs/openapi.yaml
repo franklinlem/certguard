@@ -37,9 +37,30 @@ components:
           $ref: '#/components/schemas/User'
         csrf_token:
           type: string
+        background:
+          type: object
+          required:
+          - scheduler_enabled
+          - check_workers
+          - retention_enabled
+          - retention_days
+          properties:
+            scheduler_enabled:
+              type: boolean
+            check_workers:
+              type: integer
+              minimum: 1
+              maximum: 25
+            retention_enabled:
+              type: boolean
+            retention_days:
+              type: integer
+              minimum: 30
+              maximum: 36500
       required:
       - user
       - csrf_token
+      - background
     EndpointInput:
       type: object
       properties:
@@ -151,6 +172,12 @@ components:
           type: string
           format: date-time
           nullable: true
+        next_check_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Previsão persistida; execução depende do agendador habilitado
+            e de capacidade disponível.
       required:
       - id
       - name

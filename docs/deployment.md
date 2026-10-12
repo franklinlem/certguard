@@ -27,3 +27,7 @@ Qualquer mudança de firewall, DNS de serviços existentes, redes compartilhadas
 Use pg_dump em formato custom do banco específico. Armazene backup criptografado fora da VPS; secrets e futura encryption key em armazenamento separado. Teste pg_restore em banco descartável e confira migrações, contagens e integridade antes de qualquer restauração real.
 
 Rollback inicial: selecionar imagem/commit anterior; não executar down -v, prune de volumes, DROP DATABASE ou rollback de schema automático. Migração inicial é aditiva. Mudanças destrutivas futuras precisam de plano e autorização.
+
+## Agendamento e retenção
+
+A etapa 03 adiciona a migração 003, que inicializa agendas sem apagar histórico. Na homologação, comece com ambas as tarefas desabilitadas. Cadastre um destino autorizado, habilite o agendador e confirme persistência, cadência e pausa. Avalie o pool adicional de `CHECK_WORKERS + 1` conexões e recursos da VPS. Retenção permanece desabilitada até revisar janela, backup e autorização para remoção definitiva. Consulte [operação](scheduler.md). Não reinicie serviços compartilhados nem altere o Traefik global.

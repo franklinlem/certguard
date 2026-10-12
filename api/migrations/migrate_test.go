@@ -36,10 +36,24 @@ func TestPostgres(t *testing.T) {
 		t.Fatal(e)
 	}
 	defer pool.Close()
+	// Simula atualização de uma instalação da etapa 02 com registros existentes.
+	if _, e = pool.Exec(ctx, initial); e != nil {
+		t.Fatal(e)
+	}
+	if _, e = pool.Exec(ctx, auth); e != nil {
+		t.Fatal(e)
+	}
+	if _, e = pool.Exec(ctx, `CREATE TABLE schema_migrations(version INTEGER PRIMARY KEY,applied_at TIMESTAMPTZ NOT NULL DEFAULT now()); INSERT INTO schema_migrations(version) VALUES(1),(2); INSERT INTO monitored_endpoints(name,hostname,enabled) VALUES('Legado','legacy.example.com',true),('Pausado','paused.example.com',false)`); e != nil {
+		t.Fatal(e)
+	}
 	for range 2 {
 		if e = Up(ctx, pool); e != nil {
 			t.Fatal(e)
 		}
+	}
+	var scheduled, paused int
+	if e = pool.QueryRow(ctx, "SELECT count(*) FILTER (WHERE enabled AND next_check_at IS NOT NULL),count(*) FILTER (WHERE NOT enabled AND next_check_at IS NULL) FROM monitored_endpoints").Scan(&scheduled, &paused); e != nil || scheduled != 1 || paused != 1 {
+		t.Fatal("migração de agendas", scheduled, paused, e)
 	}
 	var id string
 	if e = pool.QueryRow(ctx, "INSERT INTO monitored_endpoints(name,hostname) VALUES('Exemplo','example.com') RETURNING id").Scan(&id); e != nil {

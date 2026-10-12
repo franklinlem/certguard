@@ -1,6 +1,6 @@
-# Interface — etapa 02
+# Interface — etapa 03
 
-Interface administrativa em pt-BR: login, cadastro/edição, pausa/ativação, check manual, histórico paginado e arquivamento. Não há agendamento, alertas, visão agregada ou listagem de arquivados; a UI informa esses limites. Histórico arquivado permanece consultável por id na API.
+Interface administrativa em pt-BR: login, cadastro/edição, pausa/ativação, check manual, histórico paginado e arquivamento. O painel informa configuração do agendador e próxima execução prevista. Não há alertas, visão agregada ou listagem de arquivados; a UI informa esses limites. Histórico arquivado permanece consultável por id na API.
 
 Tokens de sessão ficam em cookie HttpOnly; CSRF somente em memória. Erros acessíveis via role=alert, mensagens de conclusão via role=status, formulários com labels e estados por texto e cor. Fontes do sistema, tema conforme preferência, layout adaptável e sem mídia que cause deslocamento de layout.
 

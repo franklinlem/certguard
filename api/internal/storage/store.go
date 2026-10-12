@@ -33,6 +33,7 @@ type Endpoint struct {
 	Warning   int        `json:"warning_days"`
 	Critical  int        `json:"critical_days"`
 	LastCheck *time.Time `json:"last_check_at"`
+	NextCheck *time.Time `json:"next_check_at"`
 }
 type Input struct {
 	Name     string `json:"name"`
@@ -60,11 +61,11 @@ func (e Endpoint) Input() Input {
 	return Input{e.Name, e.Hostname, e.Port, e.Enabled, e.Interval, e.Warning, e.Critical}
 }
 
-const columns = "id::text,name,hostname,port,enabled,interval_minutes,warning_days,critical_days,last_check_at"
+const columns = "id::text,name,hostname,port,enabled,interval_minutes,warning_days,critical_days,last_check_at,next_check_at"
 
 func scan(row pgx.Row) (Endpoint, error) {
 	var e Endpoint
-	err := row.Scan(&e.ID, &e.Name, &e.Hostname, &e.Port, &e.Enabled, &e.Interval, &e.Warning, &e.Critical, &e.LastCheck)
+	err := row.Scan(&e.ID, &e.Name, &e.Hostname, &e.Port, &e.Enabled, &e.Interval, &e.Warning, &e.Critical, &e.LastCheck, &e.NextCheck)
 	return e, err
 }
 func (s *Store) Bootstrap(ctx context.Context, email, password string) error {
@@ -155,7 +156,7 @@ func (s *Store) Create(ctx context.Context, i Input) (Endpoint, error) {
 	if e := i.Validate(); e != nil {
 		return Endpoint{}, e
 	}
-	return scan(s.Pool.QueryRow(ctx, "INSERT INTO monitored_endpoints(name,hostname,port,enabled,interval_minutes,warning_days,critical_days) VALUES($1,$2,$3,$4,$5,$6,$7) RETURNING "+columns, i.Name, i.Hostname, i.Port, i.Enabled, i.Interval, i.Warning, i.Critical))
+	return scan(s.Pool.QueryRow(ctx, "INSERT INTO monitored_endpoints(name,hostname,port,enabled,interval_minutes,warning_days,critical_days,next_check_at) VALUES($1,$2,$3,$4,$5,$6,$7,CASE WHEN $4 THEN clock_timestamp()+random()*interval '30 seconds' ELSE NULL END) RETURNING "+columns, i.Name, i.Hostname, i.Port, i.Enabled, i.Interval, i.Warning, i.Critical))
 }
 
 // Update aplica patch sob lock para não perder alterações simultâneas.
@@ -176,14 +177,14 @@ func (s *Store) Update(ctx context.Context, id string, patch func(*Input) error)
 	if e = i.Validate(); e != nil {
 		return Endpoint{}, e
 	}
-	v, e = scan(tx.QueryRow(ctx, "UPDATE monitored_endpoints SET name=$2,hostname=$3,port=$4,enabled=$5,interval_minutes=$6,warning_days=$7,critical_days=$8,updated_at=now() WHERE id=$1 RETURNING "+columns, id, i.Name, i.Hostname, i.Port, i.Enabled, i.Interval, i.Warning, i.Critical))
+	v, e = scan(tx.QueryRow(ctx, "UPDATE monitored_endpoints SET name=$2,hostname=$3,port=$4,enabled=$5,interval_minutes=$6,warning_days=$7,critical_days=$8,next_check_at=CASE WHEN NOT $5 THEN NULL WHEN NOT enabled OR hostname<>$3 OR interval_minutes<>$6 THEN clock_timestamp()+random()*interval '30 seconds' ELSE next_check_at END,updated_at=now() WHERE id=$1 RETURNING "+columns, id, i.Name, i.Hostname, i.Port, i.Enabled, i.Interval, i.Warning, i.Critical))
 	if e != nil {
 		return Endpoint{}, e
 	}
 	return v, tx.Commit(ctx)
 }
 func (s *Store) Archive(ctx context.Context, id string) error {
-	tag, e := s.Pool.Exec(ctx, "UPDATE monitored_endpoints SET deleted_at=now(),enabled=false,updated_at=now() WHERE id=$1 AND deleted_at IS NULL", id)
+	tag, e := s.Pool.Exec(ctx, "UPDATE monitored_endpoints SET deleted_at=now(),enabled=false,next_check_at=NULL,updated_at=now() WHERE id=$1 AND deleted_at IS NULL", id)
 	if e == nil && tag.RowsAffected() == 0 {
 		return pgx.ErrNoRows
 	}
@@ -213,7 +214,15 @@ func (s *Store) Check(ctx context.Context, id string, inspect Inspect) (Check, e
 	if endpoint.LastCheck != nil && time.Since(*endpoint.LastCheck) < 30*time.Second {
 		return Check{}, ErrBusy
 	}
+	return saveCheck(ctx, tx, endpoint, inspect)
+}
+
+func saveCheck(ctx context.Context, tx pgx.Tx, endpoint Endpoint, inspect Inspect) (Check, error) {
+	id := endpoint.ID
 	result := inspect(ctx, endpoint)
+	if err := ctx.Err(); err != nil {
+		return Check{}, err
+	}
 	data, e := json.Marshal(result)
 	if e != nil {
 		return Check{}, e
@@ -226,7 +235,7 @@ func (s *Store) Check(ctx context.Context, id string, inspect Inspect) (Check, e
 	if e = tx.QueryRow(ctx, "INSERT INTO certificate_checks(endpoint_id,checked_at,status,code,duration_ms,resolved_ip,metadata) VALUES($1,$2,$3,$4,$5,$6,$7) RETURNING id::text", id, result.CheckedAt, result.Status, result.Code, result.DurationMS, ip, data).Scan(&out.ID); e != nil {
 		return Check{}, e
 	}
-	if _, e = tx.Exec(ctx, "UPDATE monitored_endpoints SET last_check_at=now(),updated_at=now() WHERE id=$1", id); e != nil {
+	if _, e = tx.Exec(ctx, "UPDATE monitored_endpoints SET last_check_at=clock_timestamp(),next_check_at=clock_timestamp()+interval_minutes*interval '1 minute'*(1+random()*0.1),updated_at=clock_timestamp() WHERE id=$1", id); e != nil {
 		return Check{}, e
 	}
 	return out, tx.Commit(ctx)

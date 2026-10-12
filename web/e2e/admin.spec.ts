@@ -11,6 +11,9 @@ test("administrador cadastra, edita, pausa e arquiva endpoint sem acessar destin
   await expect(
     page.getByRole("heading", { name: "Endpoints TLS" }),
   ).toBeVisible();
+  await expect(
+    page.getByText(/Agendamento desabilitado neste ambiente/),
+  ).toBeVisible();
   await page
     .getByRole("button", { name: "Adicionar endpoint", exact: true })
     .click();
