@@ -135,6 +135,9 @@ func TestPostgresHTTPFlow(t *testing.T) {
 	if w := request(h, "PATCH", path, `{"enabled":null}`, cookie, session.CSRF, origin); w.Code != 400 {
 		t.Fatal(w.Code)
 	}
+	if w := request(h, "PATCH", path, `{"name|hostname":"invalid"}`, cookie, session.CSRF, origin); w.Code != 400 {
+		t.Fatal("campo desconhecido aceito", w.Code)
+	}
 	if w := request(h, "POST", path+"/check", "", cookie, session.CSRF, origin); w.Code != 201 || !bytes.Contains(w.Body.Bytes(), []byte("blocked_target")) {
 		t.Fatal(w.Code, w.Body.String())
 	}

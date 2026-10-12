@@ -16,7 +16,6 @@ import (
 	"net/url"
 	"regexp"
 	"strconv"
-	"strings"
 	"time"
 )
 
@@ -316,7 +315,13 @@ func (a *App) update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	for k, v := range patch {
-		if !strings.Contains("|name|hostname|port|enabled|interval_minutes|warning_days|critical_days|", "|"+k+"|") || string(v) == "null" {
+		switch k {
+		case "name", "hostname", "port", "enabled", "interval_minutes", "warning_days", "critical_days":
+		default:
+			resultError(w, storage.ErrInvalid)
+			return
+		}
+		if string(v) == "null" {
 			resultError(w, storage.ErrInvalid)
 			return
 		}
