@@ -1,0 +1,12 @@
+# Segredos e arquivos locais
+.env
+.env.*
+!.env.example
+!*.env.example
+node_modules/
+dist/
+coverage/
+*.out
+api/certguard
+*.log
+.DS_Store

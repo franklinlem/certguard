@@ -1,0 +1,20 @@
+openapi: 3.0.3
+info:
+  title: CertGuard — API de fundação
+  version: 0.0.1
+  description: Saúde do processo e disponibilidade do banco. API de negócio ainda não implementada.
+paths:
+  /health:
+    get:
+      summary: Verificar processo
+      responses:
+        '200':
+          description: Processo disponível
+  /ready:
+    get:
+      summary: Verificar conectividade PostgreSQL
+      responses:
+        '200':
+          description: Banco disponível
+        '503':
+          description: Banco indisponível

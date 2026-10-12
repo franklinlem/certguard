@@ -1,0 +1,37 @@
+name: Segurança
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  dependencies:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version: '1.27.2'
+          cache-dependency-path: api/go.sum
+      - run: go run golang.org/x/vuln/cmd/govulncheck@v1.9.0 ./...
+        working-directory: api
+  source-and-images:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Dependências e segredos no código
+        run: docker run --rm -v "$PWD:/src:ro" aquasec/trivy:latest fs --scanners vuln,secret --severity HIGH,CRITICAL --exit-code 1 /src
+      - name: Construir imagens para auditoria
+        run: |
+          docker build -f api/Dockerfile -t certguard-api:audit .
+          docker build -f web/Dockerfile -t certguard-web:audit .
+          docker save certguard-api:audit -o /tmp/api.tar
+          docker save certguard-web:audit -o /tmp/web.tar
+      - name: Auditar imagens sem expor socket Docker ao scanner
+        run: |
+          docker run --rm -v /tmp/api.tar:/image.tar:ro aquasec/trivy:latest image --input /image.tar --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1
+          docker run --rm -v /tmp/web.tar:/image.tar:ro aquasec/trivy:latest image --input /image.tar --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1

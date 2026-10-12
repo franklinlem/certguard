@@ -1,0 +1,60 @@
+package migrations
+
+import (
+	"context"
+	"github.com/jackc/pgx/v5/pgxpool"
+	"os"
+	"testing"
+	"time"
+)
+
+// Executar somente em banco descartável: o teste usa schema isolado.
+func TestPostgres(t *testing.T) {
+	url := os.Getenv("TEST_DATABASE_URL")
+	if url == "" {
+		t.Skip("TEST_DATABASE_URL não definido")
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	defer cancel()
+	admin, e := pgxpool.New(ctx, url)
+	if e != nil {
+		t.Fatal(e)
+	}
+	defer admin.Close()
+	schema := "test_certguard_" + time.Now().Format("150405000000000")
+	if _, e = admin.Exec(ctx, "CREATE SCHEMA "+schema); e != nil {
+		t.Fatal(e)
+	}
+	defer func() { _, _ = admin.Exec(context.Background(), "DROP SCHEMA "+schema+" CASCADE") }()
+	cfg, e := pgxpool.ParseConfig(url)
+	if e != nil {
+		t.Fatal(e)
+	}
+	cfg.ConnConfig.RuntimeParams["search_path"] = schema
+	pool, e := pgxpool.NewWithConfig(ctx, cfg)
+	if e != nil {
+		t.Fatal(e)
+	}
+	defer pool.Close()
+	for range 2 {
+		if e = Up(ctx, pool); e != nil {
+			t.Fatal(e)
+		}
+	}
+	var id string
+	if e = pool.QueryRow(ctx, "INSERT INTO monitored_endpoints(name,hostname) VALUES('Exemplo','example.com') RETURNING id").Scan(&id); e != nil {
+		t.Fatal(e)
+	}
+	for _, q := range []string{"INSERT INTO monitored_endpoints(name,hostname,port) VALUES('a','other.com',80)", "INSERT INTO monitored_endpoints(name,hostname,interval_minutes) VALUES('a','other.com',1)", "INSERT INTO monitored_endpoints(name,hostname,warning_days,critical_days) VALUES('a','other.com',7,30)", "INSERT INTO monitored_endpoints(name,hostname) VALUES('a','example.com')"} {
+		if _, e = pool.Exec(ctx, q); e == nil {
+			t.Fatal("constraint ausente")
+		}
+	}
+	if _, e = pool.Exec(ctx, "INSERT INTO certificate_checks(endpoint_id,checked_at,status,code,duration_ms,metadata) VALUES($1,now(),'healthy','success',1,'{}')", id); e != nil {
+		t.Fatal(e)
+	}
+	var n int
+	if e = pool.QueryRow(ctx, "SELECT count(*) FROM certificate_checks WHERE endpoint_id=$1", id).Scan(&n); e != nil || n != 1 {
+		t.Fatal(e, n)
+	}
+}

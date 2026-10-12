@@ -1,0 +1,77 @@
+# Sempre use --project-name certguard-local, certguard-dev ou certguard-prod.
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: certguard
+      POSTGRES_USER: certguard
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Defina POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks: [database]
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U certguard -d certguard']
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+    mem_limit: 512m
+    cpus: 1.0
+  migrate:
+    build:
+      context: ..
+      dockerfile: api/Dockerfile
+    command: [migrate]
+    environment:
+      DATABASE_URL: postgres://certguard:${POSTGRES_PASSWORD}@db:5432/certguard?sslmode=disable
+    networks: [database]
+    depends_on:
+      db: {condition: service_healthy}
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    restart: 'no'
+  api:
+    build:
+      context: ..
+      dockerfile: api/Dockerfile
+    environment:
+      DATABASE_URL: postgres://certguard:${POSTGRES_PASSWORD}@db:5432/certguard?sslmode=disable
+    networks: [database, app]
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+    healthcheck:
+      test: [CMD, certguard, healthcheck]
+      interval: 15s
+      timeout: 3s
+      retries: 3
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    restart: unless-stopped
+    mem_limit: 256m
+    cpus: 1.0
+  web:
+    build:
+      context: ..
+      dockerfile: web/Dockerfile
+    networks: [app]
+    depends_on: [api]
+    read_only: true
+    tmpfs: [/tmp, /var/cache/nginx, /var/run]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    healthcheck:
+      test: [CMD, wget, -q, --spider, http://127.0.0.1:8080/]
+      interval: 15s
+      timeout: 3s
+      retries: 3
+    restart: unless-stopped
+    mem_limit: 128m
+    cpus: 0.5
+networks:
+  database:
+    internal: true
+  app: {}
+volumes:
+  postgres_data: {}

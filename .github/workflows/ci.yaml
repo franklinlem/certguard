@@ -1,0 +1,89 @@
+name: Validação
+on:
+  push:
+    branches: [main, develop, 'feature/**', 'fix/**']
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: certguard
+          POSTGRES_PASSWORD: ci_only_password
+          POSTGRES_DB: certguard_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U certguard -d certguard_test"
+          --health-interval 5s --health-timeout 3s --health-retries 10
+    env:
+      TEST_DATABASE_URL: postgres://certguard:ci_only_password@localhost:5432/certguard_test?sslmode=disable
+    defaults:
+      run:
+        working-directory: api
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version: '1.27.2'
+          cache-dependency-path: api/go.sum
+      - run: test -z "$(gofmt -l .)"
+      - run: go vet ./...
+      - run: go run honnef.co/go/tools/cmd/staticcheck@v0.8.2 ./...
+      - run: go test -race -coverprofile=coverage.out ./...
+      - name: Cobertura mínima de 80% em cada pacote core
+        run: |
+          for package in security certificate; do
+            go test -coverprofile="${package}.out" "./internal/${package}"
+            go tool cover -func="${package}.out" | awk '/^total:/ {gsub(/%/, "", $3); if ($3 < 80) exit 1}'
+          done
+      - run: go test ./internal/security -fuzz=FuzzNormalize -fuzztime=10s
+      - run: go build ./cmd/certguard
+  frontend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22.23.2'
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+      - run: npm audit --audit-level=high
+  docker:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      POSTGRES_PASSWORD: ci_disposable_password_1234567890
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Validar e subir ambiente descartável
+        run: |
+          docker compose -p certguard-ci -f deploy/compose.yaml -f deploy/compose.dev.yaml config --quiet
+          docker compose -p certguard-ci -f deploy/compose.yaml -f deploy/compose.dev.yaml up --build --wait --wait-timeout 180
+          curl --fail http://127.0.0.1:8081/health
+          curl --fail http://127.0.0.1:8081/ready
+          curl --fail http://127.0.0.1:8088/ | grep 'CertGuard'
+          curl --fail http://127.0.0.1:8088/api/ready
+      - name: Logs em caso de falha
+        if: failure()
+        run: docker compose -p certguard-ci -f deploy/compose.yaml logs --no-color
+      - name: Encerrar somente o projeto efêmero da CI
+        if: always()
+        run: docker compose -p certguard-ci -f deploy/compose.yaml -f deploy/compose.dev.yaml down --volumes
