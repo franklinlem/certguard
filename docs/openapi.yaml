@@ -109,7 +109,6 @@ components:
           minimum: 0
           maximum: 36499
           default: 7
-      required: []
       minProperties: 1
       additionalProperties: false
     Endpoint:
@@ -194,7 +193,6 @@ components:
           format: date-time
         fingerprint_sha256:
           type: string
-      required: []
     Result:
       type: object
       properties:

@@ -1,6 +1,6 @@
 # ADR-004 — Sessões e verificações manuais persistidas
 
-Status: implementado, em validação. Data: 12/10/2026.
+Status: implementado e validado em CI; em revisão no PR #6. Data: 12/10/2026.
 
 ## Acesso
 Instalação de um administrador, criado por CLI com senha via stdin. Não existem cadastro público, recuperação por e-mail nem rotação de senha via UI nesta etapa. Senhas de 12–72 bytes, bcrypt custo 12. Login desconhecido usa hash fictício de mesmo custo para reduzir diferenças de tempo. Duas comparações de senha simultâneas por processo.
