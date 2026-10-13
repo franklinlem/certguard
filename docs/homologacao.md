@@ -1,6 +1,6 @@
 # Roteiro de homologação — CertGuard
 
-Estado: preparado, ainda não executado na Contabo. Não é autorização para modificar recursos compartilhados.
+Estado: inventário somente leitura executado em 13/10/2026; implantação e aceite ainda não executados na Contabo. Consulte [inventário](inventario-homologacao-2026-10-13.md) e [integração](integracao-prs-2026-10-13.md). Não é autorização para modificar recursos compartilhados.
 
 ## 1. Base revisável
 
@@ -14,13 +14,13 @@ Registrar versões Docker/Compose/Coolify/Traefik, serviços existentes, CPU/mem
 
 | Item | Evidência a preencher |
 |---|---|
-| Host/acesso e responsável | Pendente |
-| Recursos livres e margem para build/migração | Pendente |
-| Serviços/volumes/redes existentes a preservar | Pendente |
-| Rede e integração nativa do proxy | Pendente |
-| DNS e HTTPS do domínio de homologação | Pendente |
-| Commit/imagens e CI | Pendente |
-| Destino de backup fora da VPS | Pendente |
+| Host/acesso e responsável | Contabo 158.220.120.2, terminal autenticado Coolify; Franklin |
+| Recursos livres e margem para build/migração | 4974 MiB disponíveis e 78G livres; pico de build ainda não medido |
+| Serviços/volumes/redes existentes a preservar | Inventariados; 25 containers existentes, nenhuma instância CertGuard |
+| Rede e integração nativa do proxy | Traefik v3.7, http/https, letsencrypt; futura rede do recurso ainda não criada |
+| DNS e HTTPS do domínio de homologação | A para VPS confirmado; HTTPS responde com certificado autoassinado |
+| Commit/imagens e CI | Código e7970ba1; evidências na integração; imagens de deploy ainda não publicadas |
+| Destino de backup fora da VPS | Pendente; Coolify com 0 destinos S3, backups locais sem restauração validada |
 
 Qualquer mudança com risco de interrupção/perda de dados exige autorização específica após apresentar impacto e rollback concretos. Não instalar segundo Traefik nem alterar firewall/redes/volumes de outros serviços por conveniência.
 

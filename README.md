@@ -105,3 +105,7 @@ Canais novos começam pausados. Configurações são cifradas com chave externa;
 `/ready` verifica banco e migrações esperadas. `/metrics` é opt-in por bearer separado, somente na API interna; não é publicado pelo proxy web. Contadores sobrevivem à retenção dos checks. Consulte [observabilidade](docs/observability.md).
 
 [Revisão dos PRs](docs/revisao-prs-etapa-07.md), [roteiro de homologação](docs/homologacao.md), [plano](docs/plano-etapa-07.md), [ADR-009](docs/adr/009-observability-readiness.md) e [validação](docs/validation-etapa-07.md). Homologação/produção não executadas; CI e benchmark não substituem validação da VPS.
+
+## Integração e inventário (13/10/2026)
+
+PRs 1–11 integrados na main. Consulte [evidências da integração](docs/integracao-prs-2026-10-13.md), [inventário da Contabo](docs/inventario-homologacao-2026-10-13.md) e [planejamento desta etapa](docs/plano-integracao-homologacao.md). DNS dos dois ambientes criado; aplicação ainda não implantada e HTTPS da homologação pendente. Produção depende do aceite de homologação.

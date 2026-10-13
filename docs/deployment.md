@@ -38,4 +38,4 @@ Etapa 06 requer migração 005 e chave externa somente para cadastrar/ativar can
 
 ## Gate consolidado
 
-Seguir [roteiro de homologação](homologacao.md). Fixar SHA e schema esperado (1–6), verificar readiness, revisar backlog/flags, backup separado da chave e compatibilidade do rollback. METRICS_TOKEN vazio mantém endpoint desabilitado; coletor interno é configuração posterior, sem instalação automática. PRs e dependências ainda precisam ser integrados/revalidados antes de uma versão estável.
+Seguir [roteiro de homologação](homologacao.md). Fixar SHA e schema esperado (1–6), verificar readiness, revisar backlog/flags, backup separado da chave e compatibilidade do rollback. METRICS_TOKEN vazio mantém endpoint desabilitado; coletor interno é configuração posterior, sem instalação automática. PRs e dependências foram integrados em 13/10/2026; consulte [evidências](integracao-prs-2026-10-13.md) e [inventário](inventario-homologacao-2026-10-13.md) antes da primeira implantação.
