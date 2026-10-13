@@ -1,27 +1,21 @@
-# Backup externo — validação em andamento (13/10/2026)
+# Backup externo — validação real (13/10/2026)
 
-## Comprovado
+## Resultado comprovado
 
-- Conexão temporária autenticada pelo responsável permitiu acessar frank-note2 como franklin; nenhuma senha foi recebida.
-- /srv/storage corresponde ao HD ext4 /dev/sda1, já montado antes desta etapa. /mnt/sda1 criado pelo responsável é segunda montagem do mesmo disco. Diretório /srv/storage/backups/certguard criado com modo 0700, separado de Contabo/Hermes.
-- Rotina backup-contabo existente permanece intacta. Identidade SSH já utilizada por ela permite executar Docker na VPS como franklin. Não criada, lida ou copiada chave privada SSH; não alteradas permissões sudo/SSH.
-- Preparadas pastas exclusivas em ~/.local/share/certguard-backup, ~/.local/lib/certguard-backup e ~/.local/state/certguard-backup. UUID do HD registrado no servidor físico, sem versionar configuração específica.
-- Scripts de backup e ensaio preparados; primeira cópia instalada ainda requer sincronização com a revisão final antes de executar.
-- Oito testes aprovados com chave GPG descartável: cifragem real e decriptação idêntica à fixture; nomes distintos sem sobrescrita; preservação de arquivo anterior; disco ausente/incorreto; ambiente inválido/produção não configurada; falha SSH; falha de cifragem; lock de concorrência; checksum adulterado/caminho externo recusados antes de criar container. Sintaxe Bash e git diff --check aprovados. Nenhuma chave de teste é usada no ambiente real.
+- Acesso pelo Remote Desktop Commander ao frank-note2 como franklin. HD /dev/sda1 ext4 montado em /srv/storage, 433 GB livres; UUID validado pelos scripts antes de escrever.
+- Chave OpenPGP CertGuard Backup criada pelo responsável em keyring exclusivo, com entrada de senha somente no terminal. Fingerprint público: 4D6D40444014667AC0370D3AF7FCB1EC02857CD4. Senha e chave privada não recebidas, copiadas ou versionadas pelo agente.
+- Revisão final dos três scripts do PR #17 instalada em ~/.local/lib/certguard-backup com modo 0700. Configuração e backups com modo restrito.
+- Primeiro backup real da homologação: certguard-20261013T213526Z-YwHmqR.dump.gpg, 6396 bytes; checksum SHA256 aprovado. Dump custom transportado por SSH e cifrado em streaming.
+- Imagem oficial postgres:17-alpine baixada sem alterar DNS; digest sha256:b0f9560a2de083e2cc7382e75f808c7381a32852a7ec49117deedb300e552b24.
+- Após desbloqueio da chave pelo responsável, restauração real aprovada em PostgreSQL descartável, rede none, sem portas/volumes de aplicações e com dados em tmpfs. Resultado: migrations=6, schema=6, users=1, endpoints=3, checks=4, events=0, channels=0, deliveries=0.
+- Container do ensaio removido; comparação de IDs/nomes dos cinco containers preexistentes sem diferenças. Nenhuma restauração sobre banco real.
+- Cron exclusivo instalado para 05:30 diariamente, fuso local America/Sao_Paulo (-03). Conteúdo anterior preservado e cópia anterior em ~/.local/state/certguard-backup. Serviço cron ativo. Cron não altera timers Contabo/Hermes.
+- Execução manual da mesma rotina daily.sh aprovada: segunda cópia certguard-20261013T213817Z-EciFkR.dump.gpg. Produção ignorada porque production-resource não está configurado. Nenhuma exclusão automática de backups.
+- Oito testes dos scripts executados novamente e aprovados; bash -n e git diff --check aprovados. CI Validação e Segurança do commit d31f45612961e26547e999b905a0f2296c577f5a aprovadas antes desta atualização documental.
 
-## Dependências e limite atual
+## Limites e próximos passos
 
-A primeira tentativa de geração da chave pelo responsável juntou dois comandos e falhou no export. Enviado comando único correto, com entrada segura da senha; criação ainda não confirmada. Nenhum backup real gerado, nenhuma restauração real executada e nenhum agendamento instalado nesta evidência.
-
-Download de postgres:17-alpine no servidor físico falhou por resolução de auth.docker.io. Não alterado DNS global. Imagem existente na VPS identificada como sha256:b0f9560a2de083e2cc7382e75f808c7381a32852a7ec49117deedb300e552b24; transferência para ensaio ainda não concluída. Usar imagem oficial já validada, conferindo ID após importação.
-
-Conexão SSH temporária encerrou; solicitado ao responsável reabrir a sessão, sem criar credenciais persistentes. Hash de IDs/nomes dos containers físicos antes do ensaio: 21c29d4002d21382a822a520fe9769d51132f614e97d57ec0910731351e09616. Nenhum container de restauração iniciado até aqui.
-
-## Próximas verificações
-
-1. Confirmar chave protegida, registrar somente fingerprint público e instalar revisão final dos scripts.
-2. Gerar backup real cifrado da homologação e conferir checksum.
-3. Desbloqueio seguro da chave pelo responsável; ensaio completo em container PostgreSQL novo, sem rede/portas/volumes existentes, com limpeza exclusiva do próprio container.
-4. Guardar cópia protegida de recuperação em armazenamento separado, sem receber senha ou expor chave privada.
-5. Instalar agendamento diário separado às 05:30, preservando cron e timers existentes; manter todos os backups, sem exclusão automática nesta fase.
-6. Registrar evidências antes do aceite e da implantação de produção. Agendamento TLS e entrega de alertas continuam com seus gates próprios e permanecem desligados.
+- Ainda não ocorreu a primeira execução pelo cron: prevista para 14/10/2026 às 05:30. Execução manual da rotina comprovada; log automático em ~/.local/state/certguard-backup/daily.log.
+- Responsável deve guardar cópia protegida da chave privada e certificado de revogação em armazenamento separado deste computador, além da senha no gerenciador. Isso não foi realizado nem registrado como aprovado; guardar apenas a chave pública não permite recuperar backups.
+- Backups dependem de frank-note2 ligado, HD montado e conexão com a VPS. A rotina falha se disco/UUID/acesso/chave pública não estiverem disponíveis; não há notificação externa de falha configurada nesta etapa.
+- Produção não implantada. Backup de produção só será configurado após identificar o recurso exclusivo correto. Agendamento TLS e envio de alertas mantêm gates próprios.
