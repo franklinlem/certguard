@@ -1,6 +1,6 @@
 # Exclusivo da homologação Contabo. Coolify: Raw (deploy file as-is).
 # Contexto de build relativo à raiz do repositório. Não usar em produção.
-name: certguard-dev
+name: ${COOLIFY_RESOURCE_UUID:-certguard-dev}
 services:
   db:
     image: postgres:17-alpine

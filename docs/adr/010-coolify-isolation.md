@@ -21,3 +21,7 @@ Referência: [documentação oficial de Compose/Raw do Coolify](https://coolify.
 ## Compatibilidade observada na primeira tentativa
 
 Mesmo em Raw, o Coolify acrescenta labels de controle como lista. Labels Traefik também devem usar lista de strings para evitar mistura de chaves numéricas com mapa. O build usa arquivo separado de variáveis de build; a senha gerada permanece somente no runtime. O fallback vazio permite renderizar o Compose para construir imagens sem fornecer segredo ao build. No runtime, PostgreSQL exige senha e recusa inicialização sem ela; não há trust ou senha padrão. A primeira falha ocorreu antes da criação dos containers.
+
+## Identidade de projeto nas duas fases
+
+O build nativo usa --project-name com o UUID do recurso. O início nativo no host usa o nome definido pelo Compose. Fixar somente certguard-dev fez o início procurar imagens com outro prefixo e tentar rebuild sem checkout. O nome passa a ser ${COOLIFY_RESOURCE_UUID:-certguard-dev}; o Coolify exporta esse UUID nas duas fases, preservando imagens, redes e volume do mesmo recurso. Fora do Coolify, o fallback identifica homologação. Manter comando de início nativo: comandos customizados rodam no helper e podem apontar indevidamente ao .env do host. Nenhuma tentativa anterior criou dados do CertGuard.
