@@ -1,0 +1,109 @@
+# Exclusivo da homologação Contabo. Coolify: Raw (deploy file as-is).
+# Contexto de build relativo à raiz do repositório. Não usar em produção.
+name: certguard-dev
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: certguard
+      POSTGRES_USER: certguard
+      POSTGRES_PASSWORD: ${SERVICE_PASSWORD_64_DB:?}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks: [database]
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U certguard -d certguard']
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+    mem_limit: 512m
+    cpus: 1.0
+  migrate:
+    build:
+      context: .
+      dockerfile: api/Dockerfile
+    command: [migrate]
+    environment:
+      DATABASE_URL: postgres://certguard:${SERVICE_PASSWORD_64_DB}@db:5432/certguard?sslmode=disable
+    networks: [database]
+    depends_on:
+      db: {condition: service_healthy}
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    restart: 'no'
+    mem_limit: 256m
+    cpus: 1.0
+  api:
+    build:
+      context: .
+      dockerfile: api/Dockerfile
+    environment:
+      METRICS_TOKEN: ''
+      ALERT_ENCRYPTION_KEY: ''
+      DELIVERY_ENABLED: 'false'
+      SCHEDULER_ENABLED: 'false'
+      CHECK_WORKERS: ${CHECK_WORKERS:-10}
+      CHECK_TIMEOUT: ${CHECK_TIMEOUT:-10s}
+      RETENTION_ENABLED: 'false'
+      RETENTION_DAYS: ${RETENTION_DAYS:-180}
+      RETENTION_BATCH: ${RETENTION_BATCH:-500}
+      APP_ENV: production
+      PUBLIC_APP_URL: https://certguard-dev.franklem.uk
+      DATABASE_URL: postgres://certguard:${SERVICE_PASSWORD_64_DB}@db:5432/certguard?sslmode=disable
+    networks: [database, app]
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+    healthcheck:
+      test: [CMD, certguard, healthcheck]
+      interval: 15s
+      timeout: 3s
+      retries: 3
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    restart: unless-stopped
+    mem_limit: 256m
+    cpus: 1.0
+  web:
+    build:
+      context: .
+      dockerfile: web/Dockerfile
+    networks: [app, proxy]
+    labels:
+      traefik.enable: 'true'
+      traefik.docker.network: coolify
+      traefik.http.routers.certguard-dev-http.entrypoints: http
+      traefik.http.routers.certguard-dev-http.rule: Host(`certguard-dev.franklem.uk`)
+      traefik.http.routers.certguard-dev-http.middlewares: certguard-dev-https
+      traefik.http.middlewares.certguard-dev-https.redirectscheme.scheme: https
+      traefik.http.middlewares.certguard-dev-https.redirectscheme.permanent: 'true'
+      traefik.http.routers.certguard-dev.entrypoints: https
+      traefik.http.routers.certguard-dev.rule: Host(`certguard-dev.franklem.uk`)
+      traefik.http.routers.certguard-dev.tls: 'true'
+      traefik.http.routers.certguard-dev.tls.certresolver: letsencrypt
+      traefik.http.routers.certguard-dev.service: certguard-dev
+      traefik.http.services.certguard-dev.loadbalancer.server.port: '8080'
+    depends_on: [api]
+    read_only: true
+    tmpfs: [/tmp, /var/cache/nginx, /var/run]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    healthcheck:
+      test: [CMD, wget, -q, --spider, http://127.0.0.1:8080/]
+      interval: 15s
+      timeout: 3s
+      retries: 3
+    restart: unless-stopped
+    mem_limit: 128m
+    cpus: 0.5
+networks:
+  database:
+    internal: true
+  app: {}
+  proxy:
+    external: true
+    name: coolify
+volumes:
+  postgres_data: {}
