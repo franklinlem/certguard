@@ -19,7 +19,7 @@ for name, service in services.items():
     if name != 'db':
         assert service['read_only'], name
         assert service['cap_drop'] == ['ALL'], name
-    assert service['mem_limit'] <= 512 * 1024 * 1024, name
+    assert int(service['mem_limit']) <= 512 * 1024 * 1024, name
     for volume in service.get('volumes', []):
         assert volume['type'] == 'volume', 'bind mount inesperado'
 assert config['networks']['database']['internal']
