@@ -17,3 +17,7 @@ Domínio, flags desabilitadas e ambiente seguro ficam fixos nesse arquivo para i
 CI renderiza Compose e verifica redes por serviço, ausência de portas/binds/privilégios, isolamento do volume, limites, flags e labels. Builds e E2E do produto continuam na stack efêmera existente. A primeira implantação deve comprovar também o isolamento efetivo com inspeções Docker filtradas. Configuração do proxy passa a ser responsabilidade deste arquivo; alterações futuras exigem conferir o inventário novamente.
 
 Referência: [documentação oficial de Compose/Raw do Coolify](https://coolify.io/docs/applications/builds/docker-compose). O modo Raw preserva a definição e exige labels e redes completos. O Compose local permanece em deploy/compose.yaml.
+
+## Compatibilidade observada na primeira tentativa
+
+Mesmo em Raw, o Coolify acrescenta labels de controle como lista. Labels Traefik também devem usar lista de strings para evitar mistura de chaves numéricas com mapa. O build usa arquivo separado de variáveis de build; a senha gerada permanece somente no runtime. O fallback vazio permite renderizar o Compose para construir imagens sem fornecer segredo ao build. No runtime, PostgreSQL exige senha e recusa inicialização sem ela; não há trust ou senha padrão. A primeira falha ocorreu antes da criação dos containers.

@@ -31,3 +31,5 @@ Configuração registrada e revisável, implantação isolada e verificações i
 ## Ajuste após inspeção do Compose gerado
 
 O modo gerenciado do Coolify 4.3.23 adicionou sua rede de proxy a todos os serviços, inclusive db/migrate/API. Para preservar isolamento, preparar compose.coolify.yaml na raiz com redes explícitas e labels somente no web, usando Raw (deploy file as-is). Rede externa coolify já confirmada no inventário. Contexto de build na raiz, nomes e domínio exclusivos da homologação. Validar política de isolamento e sintaxe na CI antes de selecionar o novo SHA. Não alterar configuração global do proxy.
+
+Primeira tentativa interrompida antes de iniciar containers por incompatibilidade de labels em mapa com labels de controle acrescentados pelo Coolify. Corrigir para lista e renderização de build sem segredo, mantendo PostgreSQL fail-closed no runtime. Administrador informado: franklinlem@gmail.com; senha permanece pendente de entrada segura.
