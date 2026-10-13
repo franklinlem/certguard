@@ -36,6 +36,7 @@ services:
       context: ..
       dockerfile: api/Dockerfile
     environment:
+      METRICS_TOKEN: ${METRICS_TOKEN:-}
       ALERT_ENCRYPTION_KEY: ${ALERT_ENCRYPTION_KEY:-}
       DELIVERY_ENABLED: ${DELIVERY_ENABLED:-false}
       SCHEDULER_ENABLED: ${SCHEDULER_ENABLED:-false}

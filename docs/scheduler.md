@@ -11,7 +11,7 @@ O comando `serve` inicia os workers junto da API e encerra todos ao receber SIGT
 | RETENTION_DAYS | 180 | 30–36500 |
 | RETENTION_BATCH | 500 | 1–1000 por minuto/instância |
 
-Configuração inválida impede a inicialização da API. O pool de tarefas reserva capacidade máxima de `CHECK_WORKERS + 1` conexões, separada do pool da API. Avalie conexões, memória e CPU antes de mudar workers ou réplicas.
+Configuração inválida impede a inicialização da API. O pool de tarefas reserva capacidade máxima de `CHECK_WORKERS + 2` conexões, separada do pool da API. Avalie conexões, memória e CPU antes de mudar workers ou réplicas.
 
 Cadastre apenas destinos autorizados. Habilite `SCHEDULER_ENABLED=true` no ambiente escolhido e reinicie somente o serviço CertGuard pelo procedimento desse ambiente. Primeiro valide homologação. A interface exibirá “Agendamento habilitado”; use Atualizar para obter as datas atuais. Essa indicação representa configuração, não um heartbeat. Atrasos podem ocorrer por capacidade, indisponibilidade do banco ou reinício. Monitore logs e idade do último resultado.
 

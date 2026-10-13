@@ -90,6 +90,14 @@ test("administrador cadastra, edita, pausa e arquiva endpoint sem acessar destin
   await expect(
     page.getByText("Nenhuma entrega nesta página.", { exact: true }),
   ).toBeVisible();
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth,
+    ),
+  ).toBe(true);
+  for (const path of ["/metrics", "/api/metrics", "/api/anything"]) {
+    expect((await page.request.get(path)).status()).toBe(404);
+  }
   await page.getByRole("button", { name: "Sair", exact: true }).click();
   await expect(
     page.getByRole("button", { name: "Entrar", exact: true }),

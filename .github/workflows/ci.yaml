@@ -46,6 +46,8 @@ jobs:
             go tool cover -func="${package}.out" | awk '/^total:/ {gsub(/%/, "", $3); if ($3 < 80) exit 1}'
           done
       - run: go test ./internal/security -fuzz=FuzzNormalize -fuzztime=10s
+      - name: Benchmark de leituras em banco descartável (1000 endpoints, 3000 checks)
+        run: go test -run '^$' -bench '^BenchmarkPostgres(Dashboard|Metrics)$' -benchtime=20x -benchmem ./internal/storage
       - run: go build ./cmd/certguard
   frontend:
     runs-on: ubuntu-latest
@@ -77,6 +79,7 @@ jobs:
       RETENTION_ENABLED: "false"
       DELIVERY_ENABLED: "false"
       ALERT_ENCRYPTION_KEY: ""
+      METRICS_TOKEN: ""
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Validar e subir ambiente descartável
@@ -96,6 +99,8 @@ jobs:
         run: printf '%s' 'Senha-E2E-descartavel-123' | docker compose -p certguard-ci -f deploy/compose.yaml exec -T api certguard admin-create admin@example.com
       - run: npm ci && npx playwright install --with-deps chromium && npx playwright test
         working-directory: web
+      - name: Ensaiar backup/restauração somente em banco descartável novo
+        run: bash scripts/ci-backup-restore.sh
       - name: Logs em caso de falha
         if: failure()
         run: docker compose -p certguard-ci -f deploy/compose.yaml logs --no-color

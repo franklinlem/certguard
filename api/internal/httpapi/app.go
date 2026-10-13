@@ -31,6 +31,7 @@ type App struct {
 	// Background é imutável após iniciar o servidor.
 	Background      scheduler.Config
 	DeliveryEnabled bool
+	MetricsToken    string
 	store           *storage.Store
 	origin          string
 	secure          bool
@@ -136,7 +137,8 @@ func (a *App) protected(next http.HandlerFunc) http.HandlerFunc {
 }
 func (a *App) Handler() http.Handler {
 	mux := http.NewServeMux()
-	mux.Handle("/", Handler(a.store.Pool))
+	mux.Handle("/", Handler(a.store))
+	mux.Handle("GET /metrics", MetricsHandler(a.MetricsToken, a.store.Metrics))
 	mux.HandleFunc("POST /api/v1/auth/login", a.login)
 	mux.HandleFunc("GET /api/v1/auth/me", func(w http.ResponseWriter, r *http.Request) {
 		u, t, ok := a.session(w, r)

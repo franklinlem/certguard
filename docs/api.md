@@ -1,11 +1,11 @@
-# API implementada — etapa 06
+# API implementada — etapa 07
 
 Todas as respostas de erro usam `{ "error": "mensagem em português" }`, sem SQL, secrets ou dados internos. Corpos JSON limitados a 8 KiB, campos desconhecidos rejeitados.
 
 | Método | Rota | Acesso / comportamento |
 |---|---|---|
 | GET | /health | Público: processo disponível |
-| GET | /ready | Público: PostgreSQL responde |
+| GET | /ready | Público: PostgreSQL e schema esperado completos |
 | POST | /api/v1/auth/login | Origin exata; e-mail/senha; retorna usuário, csrf_token e cookie |
 | GET | /api/v1/auth/me | Sessão válida; retorna usuário e csrf_token |
 | POST | /api/v1/auth/logout | Sessão, Origin e CSRF; revoga sessão |
@@ -33,3 +33,5 @@ Alertas: `state=active` por padrão (all/active/resolved), `endpoint_id` UUID op
 Canais: GET/POST `/api/v1/alert-channels`; PATCH/DELETE `/{id}`. POST recebe type/name/config, sempre cria pausado. PATCH permite somente name/enabled; configuração/destino imutáveis. Até 20 não arquivados. GET retorna items com id/type/name/enabled/created_at, sem segredos. Mutações exigem sessão/Origin/CSRF; chave ausente dá 503 no cadastro/ativação.
 
 Entregas: GET `/api/v1/alert-deliveries?event_id=UUID&limit=20&offset=0`, event_id opcional. Retorna items/limit/offset com estado, contagem e último código. Sem payload ou configuração cifrada na resposta. Não existe envio de teste/retry manual. Sessão acrescenta notifications.configured/delivery_enabled.
+
+`GET /metrics` exige METRICS_TOKEN bearer separado (vazio: 404; inválido: 401; coleta falha: 503). Resposta text/plain Prometheus 0.0.4, no-store, deadline 3s. Apenas API interna; proxy web bloqueia /metrics e /api/metrics. Não usa sessão/CSRF nem expõe hostnames/UUIDs/segredos. Referência de famílias em observability.md.

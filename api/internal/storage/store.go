@@ -262,6 +262,9 @@ func saveCheck(ctx context.Context, tx pgx.Tx, endpoint Endpoint, inspect Inspec
 	if e = recordAlert(ctx, tx, endpoint, out); e != nil {
 		return Check{}, e
 	}
+	if e = recordCheckMetrics(ctx, tx, result.DurationMS, result.Code != "success"); e != nil {
+		return Check{}, e
+	}
 	return out, tx.Commit(ctx)
 }
 func (s *Store) History(ctx context.Context, id string, limit, offset int) ([]Check, error) {
