@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import { api, APIError } from "./api";
-import type { Check, Endpoint, Session } from "./api";
+import type { Check, Endpoint, Session, Dashboard } from "./api";
+
+import { SummaryCards, CertificateDetails, HistoryChart } from "./Dashboard";
 
 const date = (value: string | null) =>
   value ? new Date(value).toLocaleString("pt-BR") : "Ainda não verificado";
@@ -32,11 +34,15 @@ export function App() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [items, setItems] = useState<Endpoint[]>([]);
+  const [dashboard, setDashboard] = useState<Dashboard | null>(null);
+  const [dashboardLoading, setDashboardLoading] = useState(false);
+  const [dashboardError, setDashboardError] = useState(false);
   const [offset, setOffset] = useState(0);
   const [editing, setEditing] = useState<Endpoint | "new" | null>(null);
   const [selected, setSelected] = useState<Endpoint | null>(null);
   const [history, setHistory] = useState<Check[]>([]);
   const [historyOffset, setHistoryOffset] = useState(0);
+  const [historyError, setHistoryError] = useState(false);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [archive, setArchive] = useState<Endpoint | null>(null);
   const [notice, setNotice] = useState("");
@@ -68,20 +74,49 @@ export function App() {
     };
   }, [handleError]);
   const refresh = useCallback(async () => {
-    const data = await api<{ items: Endpoint[] }>(
-      `/endpoints?limit=20&offset=${offset}`,
-    );
-    setItems(data.items);
+    setDashboardLoading(true);
+    setDashboardError(false);
+    try {
+      const data = await api<Dashboard>(`/dashboard?limit=20&offset=${offset}`);
+      setItems(data.items);
+      setDashboard(data);
+      setSelected((previous) =>
+        previous
+          ? (data.items.find((e) => e.id === previous.id) ?? null)
+          : null,
+      );
+      return data.items;
+    } catch (e) {
+      setDashboard(null);
+      setItems([]);
+      setDashboardError(true);
+      throw e;
+    } finally {
+      setDashboardLoading(false);
+    }
   }, [offset]);
   useEffect(() => {
     if (!session) return;
     let active = true;
-    api<{ items: Endpoint[] }>(`/endpoints?limit=20&offset=${offset}`)
+    setDashboardLoading(true);
+    setDashboardError(false);
+    setDashboard(null);
+    setItems([]);
+    api<Dashboard>(`/dashboard?limit=20&offset=${offset}`)
       .then((d) => {
-        if (active) setItems(d.items);
+        if (active) {
+          setItems(d.items);
+          setDashboard(d);
+        }
       })
       .catch((e) => {
-        if (active) handleError(e);
+        if (active) {
+          setDashboardError(true);
+          handleError(e);
+        }
+      })
+      .finally(() => {
+        if (active) setDashboardLoading(false);
       });
     return () => {
       active = false;
@@ -91,6 +126,7 @@ export function App() {
     if (!session || !selected) return;
     let active = true;
     setHistoryLoading(true);
+    setHistoryError(false);
     setHistory([]);
     api<{ items: Check[] }>(
       `/endpoints/${selected.id}/checks?limit=20&offset=${historyOffset}`,
@@ -99,7 +135,10 @@ export function App() {
         if (active) setHistory(d.items);
       })
       .catch((e) => {
-        if (active) handleError(e);
+        if (active) {
+          setHistoryError(true);
+          handleError(e);
+        }
       })
       .finally(() => {
         if (active) setHistoryLoading(false);
@@ -177,6 +216,7 @@ export function App() {
                     session.csrf_token,
                   );
                   setSession(null);
+                  setDashboard(null);
                   setItems([]);
                   setSelected(null);
                   setEditing(null);
@@ -266,6 +306,35 @@ export function App() {
             {session.background?.retention_enabled &&
               ` Resultados com mais de ${session.background.retention_days} dias são removidos gradualmente, preservando o último de cada endpoint.`}
           </p>
+          <div className="actions dashboard-toolbar">
+            <button
+              disabled={busy || dashboardLoading}
+              onClick={() =>
+                act(async () => {
+                  await refresh();
+                  setNotice("Painel atualizado.");
+                })
+              }
+            >
+              Atualizar painel
+            </button>
+          </div>
+          {dashboardLoading ? (
+            <div className="dashboard-placeholder" role="status">
+              Carregando visão geral…
+            </div>
+          ) : dashboardError ? (
+            <p className="message">
+              Visão geral indisponível. Tente atualizar o painel.
+            </p>
+          ) : (
+            dashboard?.summary && (
+              <SummaryCards
+                summary={dashboard.summary}
+                generatedAt={dashboard.generated_at}
+              />
+            )
+          )}
           {editing && (
             <section className="panel" aria-labelledby="form-title">
               <h2 id="form-title">
@@ -350,7 +419,7 @@ export function App() {
             </section>
           )}
           <section aria-label="Endpoints cadastrados" className="endpoint-list">
-            {items.length === 0 ? (
+            {dashboardLoading || dashboardError ? null : items.length === 0 ? (
               <p>
                 Nenhum endpoint nesta página. Cadastre um domínio para começar.
               </p>
@@ -359,6 +428,19 @@ export function App() {
                 <article className="endpoint" key={ep.id}>
                   <div>
                     <h2>{ep.name}</h2>
+                    <span
+                      className={`badge ${ep.latest?.status ?? "unchecked"}`}
+                    >
+                      {ep.latest
+                        ? statuses[ep.latest.status] || ep.latest.status
+                        : "○ Sem resultado"}
+                    </span>
+                    <p className="hint">
+                      Vencimento observado:{" "}
+                      {ep.latest?.certificate
+                        ? date(ep.latest.certificate.not_after)
+                        : "Não disponível"}
+                    </p>
                     <p className="host">
                       {ep.hostname}:443{" "}
                       <span className="phase">
@@ -366,7 +448,7 @@ export function App() {
                       </span>
                     </p>
                     <p className="hint">
-                      Última verificação: {date(ep.last_check_at)}
+                      Última verificação: {date(ep.latest?.checked_at ?? null)}
                     </p>
                     <p className="hint">
                       Próxima execução prevista:{" "}
@@ -387,9 +469,11 @@ export function App() {
                             undefined,
                             session.csrf_token,
                           );
-                          await refresh();
+                          const fresh = await refresh();
                           setHistoryOffset(0);
-                          setSelected({ ...ep });
+                          setSelected(
+                            fresh.find((item) => item.id === ep.id) ?? null,
+                          );
                           setNotice(
                             "Verificação concluída. Consulte o resultado no histórico.",
                           );
@@ -405,7 +489,7 @@ export function App() {
                         setHistoryOffset(0);
                       }}
                     >
-                      Histórico
+                      Detalhes e histórico
                     </button>
                     <button disabled={busy} onClick={() => setEditing(ep)}>
                       Editar
@@ -436,14 +520,19 @@ export function App() {
           </section>
           <nav className="actions pagination" aria-label="Páginas de endpoints">
             <button
-              disabled={offset === 0 || busy}
+              disabled={offset === 0 || busy || dashboardLoading}
               onClick={() => setOffset(Math.max(0, offset - 20))}
             >
               Anterior
             </button>
             <span>Página {offset / 20 + 1}</span>
             <button
-              disabled={items.length < 20 || busy}
+              disabled={
+                !dashboard ||
+                offset + items.length >= dashboard.summary?.total ||
+                busy ||
+                dashboardLoading
+              }
               onClick={() => setOffset(offset + 20)}
             >
               Próxima
@@ -488,13 +577,24 @@ export function App() {
           {selected && (
             <section className="panel" aria-labelledby="history-title">
               <div className="section-header">
-                <h2 id="history-title">Histórico · {selected.name}</h2>
+                <h2 id="history-title">
+                  Detalhes e histórico · {selected.name}
+                </h2>
                 <button onClick={() => setSelected(null)}>
                   Fechar histórico
                 </button>
               </div>
+              <CertificateDetails result={selected.latest} />
+              {!historyLoading && history.length > 0 && (
+                <HistoryChart checks={history} />
+              )}
               {historyLoading ? (
                 <p role="status">Carregando histórico…</p>
+              ) : historyError ? (
+                <p>
+                  Histórico indisponível. Atualize o painel para tentar
+                  novamente.
+                </p>
               ) : history.length === 0 ? (
                 <p>Nenhuma verificação nesta página.</p>
               ) : (
@@ -518,11 +618,17 @@ export function App() {
                         </dd>
                         <dt>Hostname / cadeia</dt>
                         <dd>
-                          {check.result.hostname_valid ? "Válido" : "Inválido"}{" "}
+                          {check.result.hostname_valid === undefined
+                            ? "Não avaliado"
+                            : check.result.hostname_valid
+                              ? "Válido"
+                              : "Inválido"}{" "}
                           /{" "}
-                          {check.result.chain_valid
-                            ? "Confiável"
-                            : "Não confiável"}
+                          {check.result.chain_valid === undefined
+                            ? "Não avaliado"
+                            : check.result.chain_valid
+                              ? "Confiável"
+                              : "Não confiável"}
                         </dd>
                         <dt>SHA-256</dt>
                         <dd className="fingerprint">

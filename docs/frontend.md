@@ -1,6 +1,6 @@
-# Interface — etapa 03
+# Interface — etapa 04
 
-Interface administrativa em pt-BR: login, cadastro/edição, pausa/ativação, check manual, histórico paginado e arquivamento. O painel informa configuração do agendador e próxima execução prevista. Não há alertas, visão agregada ou listagem de arquivados; a UI informa esses limites. Histórico arquivado permanece consultável por id na API.
+Interface administrativa em pt-BR: login, cadastro/edição, pausa/ativação, check manual, histórico paginado e arquivamento. O painel informa configuração do agendador e próxima execução prevista. Há visão agregada, detalhes e gráfico de até 20 checks por página. Não há alertas ou listagem de arquivados; a UI informa esses limites. Histórico arquivado permanece consultável por id na API.
 
 Tokens de sessão ficam em cookie HttpOnly; CSRF somente em memória. Erros acessíveis via role=alert, mensagens de conclusão via role=status, formulários com labels e estados por texto e cor. Fontes do sistema, tema conforme preferência, layout adaptável e sem mídia que cause deslocamento de layout.
 
@@ -12,3 +12,5 @@ Referências consultadas:
 - https://developers.google.com/search/docs?hl=pt-br
 - https://developer.chrome.com/docs/performance/insights/cache?hl=pt-br
 - https://web.dev/articles/optimize-cls?hl=pt-br#images_without_dimensions
+
+O dashboard oferece atualização explícita, contadores globais independentes da paginação e status textual por endpoint. Datas indicam o resultado observado. Detalhes incluem protocolo, cifra, IP, validade e SANs. Gráfico SVG possui dimensões e tabela acessível; erros sem validade interrompem a linha. Carregamento, indisponibilidade e ausência de dados são estados distintos.

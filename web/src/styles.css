@@ -454,3 +454,93 @@ dd {
     border-color: #c4d2d5;
   }
 }
+
+.dashboard-toolbar {
+  margin: 20px 0;
+}
+.dashboard-placeholder {
+  min-height: 250px;
+  display: grid;
+  place-items: center;
+}
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+.summary-card {
+  border: 1px solid #455762;
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  min-height: 100px;
+}
+.summary-card strong {
+  font-size: 30px;
+  line-height: 1.4;
+}
+.summary-card span {
+  font-size: 14px;
+}
+.overview {
+  margin-bottom: 28px;
+}
+.history-chart {
+  margin: 24px 0;
+  padding-block: 16px;
+  border-block: 1px solid #455762;
+}
+.history-chart svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 640 / 250;
+  color: inherit;
+}
+.history-chart svg text {
+  fill: currentColor;
+  font-size: 13px;
+}
+.chart-axis {
+  stroke: currentColor;
+  opacity: 0.5;
+}
+.chart-line {
+  stroke: currentColor;
+  stroke-width: 2;
+}
+.chart-point {
+  fill: currentColor;
+}
+.table-scroll {
+  overflow-x: auto;
+}
+table {
+  border-collapse: collapse;
+  width: 100%;
+}
+th,
+td {
+  text-align: left;
+  padding: 10px;
+  border-bottom: 1px solid #455762;
+}
+caption {
+  text-align: left;
+  padding-top: 12px;
+}
+summary {
+  cursor: pointer;
+}
+dd {
+  overflow-wrap: anywhere;
+}
+@media (max-width: 600px) {
+  .summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .summary-card {
+    padding: 12px;
+  }
+}

@@ -1,4 +1,4 @@
-# Arquitetura — etapa 03
+# Arquitetura — etapa 04
 
 Monorepositório: api/ (Go), web/ (React/TypeScript), deploy/ (Compose) e docs/.
 
@@ -10,6 +10,8 @@ PostgreSQL mantém administrador, sessões (hash de token), endpoints e históri
 
 A interface React usa cookies same-origin e token CSRF em memória. Login, cadastro, edição, pausa, histórico, checks manuais e arquivamento estão implementados. Nginx serve assets e encaminha /api/v1 sem remover o prefixo.
 
-A CI usa PostgreSQL e Compose efêmeros. Integração HTTP testa o fluxo com resultado de inspeção controlado; testes core usam servidores TLS locais. Playwright valida o fluxo administrativo sem conexões TLS externas. Próximos componentes: alertas e visão agregada. Não há deploy automático.
+A CI usa PostgreSQL e Compose efêmeros. Integração HTTP testa o fluxo com resultado de inspeção controlado; testes core usam servidores TLS locais. Playwright valida o fluxo administrativo sem conexões TLS externas. Próximos componentes: alertas. Não há deploy automático.
 
 O agendador integra o ciclo de vida de `serve`, com pool PostgreSQL separado da API. Cada worker usa `SKIP LOCKED` e mantém a transação durante o check; resultado, último check e próxima execução são atômicos. Manual e automático compartilham o lock. A retenção tem uma goroutine independente, executa um lote por minuto e preserva o último resultado. Ambos exigem habilitação explícita. Veja ADR-005.
+
+`internal/storage/dashboard.go` reúne contadores e a página em snapshot read-only. A interface recebe o último resultado do destino atual por endpoint, evitando requests adicionais por linha. Gráfico e detalhes reutilizam o histórico paginado e os metadados do motor, sem novas dependências ou tabelas.

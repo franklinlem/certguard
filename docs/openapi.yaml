@@ -1,8 +1,9 @@
 openapi: 3.0.3
 info:
   title: CertGuard — API administrativa
-  version: 0.0.2
-  description: Sessões, endpoints e checks manuais. Sem scheduler ativo.
+  version: 0.0.4
+  description: 'API administrativa: sessões, endpoints, checks persistidos, configuração
+    de agendamento e dashboard.'
 components:
   securitySchemes:
     session:
@@ -323,6 +324,121 @@ components:
       required:
       - email
       - password
+    DashboardSummary:
+      type: object
+      properties:
+        total:
+          type: integer
+          minimum: 0
+        enabled:
+          type: integer
+          minimum: 0
+        paused:
+          type: integer
+          minimum: 0
+        healthy:
+          type: integer
+          minimum: 0
+        warning:
+          type: integer
+          minimum: 0
+        critical:
+          type: integer
+          minimum: 0
+        errors:
+          type: integer
+          minimum: 0
+        unchecked:
+          type: integer
+          minimum: 0
+        expiring_30_days:
+          type: integer
+          minimum: 0
+      required:
+      - total
+      - enabled
+      - paused
+      - healthy
+      - warning
+      - critical
+      - errors
+      - unchecked
+      - expiring_30_days
+    EndpointView:
+      allOf:
+      - $ref: '#/components/schemas/Endpoint'
+      - type: object
+        properties:
+          latest:
+            type: object
+            properties:
+              hostname:
+                type: string
+              port:
+                type: integer
+              checked_at:
+                type: string
+                format: date-time
+              duration_ms:
+                type: integer
+              status:
+                type: string
+                enum:
+                - healthy
+                - warning
+                - critical
+                - error
+              code:
+                type: string
+              resolved_ip:
+                type: string
+              tls_version:
+                type: string
+              cipher_suite:
+                type: string
+              certificate:
+                $ref: '#/components/schemas/Certificate'
+              chain:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Certificate'
+              days_remaining:
+                type: integer
+              hostname_valid:
+                type: boolean
+              chain_valid:
+                type: boolean
+            required:
+            - hostname
+            - port
+            - checked_at
+            - status
+            - code
+            nullable: true
+        required:
+        - latest
+    Dashboard:
+      type: object
+      required:
+      - summary
+      - items
+      - generated_at
+      - limit
+      - offset
+      properties:
+        summary:
+          $ref: '#/components/schemas/DashboardSummary'
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/EndpointView'
+        generated_at:
+          type: string
+          format: date-time
+        limit:
+          type: integer
+        offset:
+          type: integer
   parameters:
     Origin:
       name: Origin
@@ -955,3 +1071,60 @@ paths:
           description: Disponível
         '503':
           description: Indisponível
+  /api/v1/dashboard:
+    get:
+      summary: Indicadores globais e página de endpoints no mesmo snapshot
+      security:
+      - session: []
+      responses:
+        '200':
+          description: Operação concluída
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Dashboard'
+        '400':
+          description: Entrada inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Credenciais ou sessão inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Origem ou CSRF inválido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Registro não encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Conflito, pausa, lock ou cooldown
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Limite excedido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Indisponibilidade temporária
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      parameters:
+      - $ref: '#/components/parameters/limit'
+      - $ref: '#/components/parameters/offset'

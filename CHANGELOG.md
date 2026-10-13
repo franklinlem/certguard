@@ -1,5 +1,11 @@
 # Histórico
 
+## Etapa 04 — em revisão
+- Dashboard autenticado com contadores globais e último resultado por destino.
+- Detalhes de certificado/TLS e gráfico temporal com tabela acessível.
+- Estados de ausência, carregamento e falha; atualização explícita.
+- Testes SQL, frontend e E2E; sem deploy.
+
 ## Etapa 03 — em revisão
 - Agendamento opt-in com workers limitados, jitter e locks compartilhados com checks manuais.
 - Próxima execução persistida e exibida no painel.

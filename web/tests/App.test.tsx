@@ -11,6 +11,17 @@ afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
 });
+const summary = {
+  total: 1,
+  enabled: 1,
+  paused: 0,
+  healthy: 0,
+  warning: 0,
+  critical: 0,
+  errors: 0,
+  unchecked: 1,
+  expiring_30_days: 0,
+};
 function response(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
@@ -72,7 +83,13 @@ test("carrega endpoints reais e envia check autenticado com CSRF", async () => {
       );
     if (path.endsWith("/check"))
       return Promise.resolve(response({ id: "c" }, 201));
-    return Promise.resolve(response({ items: [endpoint] }));
+    return Promise.resolve(
+      response({
+        items: [endpoint],
+        summary,
+        generated_at: "2026-10-12T12:00:00Z",
+      }),
+    );
   });
   vi.stubGlobal("fetch", fetchMock);
   render(<App />);
@@ -101,36 +118,36 @@ test("carrega endpoints reais e envia check autenticado com CSRF", async () => {
 test("mostra agenda habilitada, próxima execução e retenção", async () => {
   vi.stubGlobal(
     "fetch",
-    vi
-      .fn()
-      .mockImplementation((path: string) =>
-        Promise.resolve(
-          response(
-            path.endsWith("/auth/me")
-              ? {
-                  user: { id: "u", email: "admin@example.com" },
-                  csrf_token: "t",
-                  background: {
-                    scheduler_enabled: true,
-                    retention_enabled: true,
-                    retention_days: 180,
-                  },
-                }
-              : {
-                  items: [
-                    {
-                      id: "e",
-                      name: "Site",
-                      hostname: "example.com",
-                      enabled: true,
-                      last_check_at: null,
-                      next_check_at: "2026-10-13T12:00:00Z",
-                    },
-                  ],
+    vi.fn().mockImplementation((path: string) =>
+      Promise.resolve(
+        response(
+          path.endsWith("/auth/me")
+            ? {
+                user: { id: "u", email: "admin@example.com" },
+                csrf_token: "t",
+                background: {
+                  scheduler_enabled: true,
+                  retention_enabled: true,
+                  retention_days: 180,
                 },
-          ),
+              }
+            : {
+                summary,
+                generated_at: "2026-10-12T12:00:00Z",
+                items: [
+                  {
+                    id: "e",
+                    name: "Site",
+                    hostname: "example.com",
+                    enabled: true,
+                    last_check_at: null,
+                    next_check_at: "2026-10-13T12:00:00Z",
+                  },
+                ],
+              },
         ),
       ),
+    ),
   );
   render(<App />);
   expect(await screen.findByText(/Agendamento habilitado/)).toBeTruthy();
@@ -138,4 +155,26 @@ test("mostra agenda habilitada, próxima execução e retenção", async () => {
     await screen.findByText(/Próxima execução prevista:.*2026/),
   ).toBeTruthy();
   expect(screen.getByText(/Resultados com mais de 180 dias/)).toBeTruthy();
+});
+
+test("falha ao carregar dashboard não aparece como ausência de endpoints", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi
+      .fn()
+      .mockImplementation((path: string) =>
+        Promise.resolve(
+          path.endsWith("/auth/me")
+            ? response({
+                user: { id: "u", email: "admin@example.com" },
+                csrf_token: "t",
+              })
+            : response({ error: "Banco indisponível" }, 503),
+        ),
+      ),
+  );
+  render(<App />);
+  expect(await screen.findByText(/Visão geral indisponível/)).toBeTruthy();
+  expect(screen.queryByText(/Nenhum endpoint nesta página/)).toBeNull();
+  expect(screen.queryByRole("region", { name: "Visão geral" })).toBeNull();
 });

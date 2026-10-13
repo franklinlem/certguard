@@ -2,7 +2,7 @@
 
 Monitor self-hosted de certificados TLS, com validação de destinos e proteção SSRF.
 
-**Estado: autenticação, endpoints, verificações manuais e agendamento automático opt-in. Ainda não é o MVP completo nem uma versão pronta para produção.**
+**Estado: autenticação, endpoints, verificações manuais, agendamento automático opt-in e dashboard. Ainda não é o MVP completo nem uma versão pronta para produção.**
 
 ## Entregue nesta etapa
 - Go: inspeção TLS via CLI, validação de cadeia/hostname, SANs, fingerprint, validade e classificação.
@@ -12,10 +12,11 @@ Monitor self-hosted de certificados TLS, com validação de destinos e proteçã
 - Sessões persistidas, CSRF, rate limiting e verificação manual autenticada com cooldown.
 - Agendador com workers limitados, jitter, bloqueio por endpoint e próxima execução persistida.
 - Retenção opt-in em lotes, preservando o último resultado de cada endpoint.
+- Dashboard global, status por endpoint, detalhes de certificado e gráfico acessível de histórico.
 - Docker Compose e GitHub Actions com integração PostgreSQL e E2E.
 - Planejamento, decisões técnicas, modelo de ameaças e roteiro de homologação.
 
-Alertas, recuperação de senha e dashboard agregado pertencem aos próximos incrementos. As verificações manuais estão restritas ao administrador autenticado.
+Alertas e recuperação de senha pertencem aos próximos incrementos. As verificações manuais estão restritas ao administrador autenticado.
 
 ## Desenvolvimento
 Requisitos: Go 1.27.2, Node.js 22.23.2+ e Docker com Compose v2.
@@ -78,3 +79,9 @@ Consulte [a operação do agendador](docs/scheduler.md) antes de habilitar `SCHE
 A limpeza de histórico é independente e desabilitada por padrão. `RETENTION_ENABLED=true` remove definitivamente resultados antigos, mantendo o último de cada endpoint. Revise a janela e o backup antes de habilitar em ambiente real. Esta entrega não altera a VPS.
 
 Planejamento: [etapa 03](docs/plano-etapa-03.md). Decisão: [ADR-005](docs/adr/005-scheduler-retention.md). Evidências: [validação](docs/validation-etapa-03.md).
+
+## Dashboard (etapa 04)
+
+Indicadores incluem todos os endpoints não arquivados, mesmo fora da página atual. O status é o último observado, com data explícita. Detalhes e gráfico mostram dados reais persistidos; erros sem certificado não viram dias fictícios. Use **Atualizar painel** para obter um novo snapshot. O gráfico exibe até 20 checks da página, com tabela acessível.
+
+[Planejamento](docs/plano-etapa-04.md), [ADR-006](docs/adr/006-dashboard-snapshot.md) e [validação](docs/validation-etapa-04.md).

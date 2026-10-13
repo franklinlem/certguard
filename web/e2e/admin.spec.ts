@@ -23,6 +23,16 @@ test("administrador cadastra, edita, pausa e arquiva endpoint sem acessar destin
   await expect(
     page.getByRole("heading", { name: "Exemplo E2E", exact: true }),
   ).toBeVisible();
+  await expect(page.getByRole("region", { name: "Visão geral" })).toBeVisible();
+  await expect(
+    page.getByText("○ Sem resultado", { exact: true }),
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: "Atualizar painel", exact: true })
+    .click();
+  await expect(
+    page.getByText("Painel atualizado.", { exact: true }),
+  ).toBeVisible();
   await page.getByRole("button", { name: "Editar", exact: true }).click();
   await page.getByLabel("Nome", { exact: true }).fill("Exemplo atualizado");
   await page.getByRole("button", { name: "Salvar", exact: true }).click();
@@ -33,9 +43,14 @@ test("administrador cadastra, edita, pausa e arquiva endpoint sem acessar destin
   await expect(
     page.getByRole("button", { name: "Verificar agora", exact: true }),
   ).toBeDisabled();
-  await page.getByRole("button", { name: "Histórico", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Detalhes e histórico", exact: true })
+    .click();
   await expect(
     page.getByText("Nenhuma verificação nesta página.", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("Ainda não há resultado para o destino atual."),
   ).toBeVisible();
   await page.getByRole("button", { name: "Arquivar", exact: true }).click();
   await page

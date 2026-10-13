@@ -38,7 +38,7 @@ func TestOriginAndUnauthorized(t *testing.T) {
 		t.Fatal(e)
 	}
 	h := a.Handler()
-	for _, path := range []string{"/api/v1/auth/me", "/api/v1/endpoints", "/api/v1/endpoints/00000000-0000-0000-0000-000000000000/checks"} {
+	for _, path := range []string{"/api/v1/dashboard", "/api/v1/auth/me", "/api/v1/endpoints", "/api/v1/endpoints/00000000-0000-0000-0000-000000000000/checks"} {
 		if w := request(h, "GET", path, "", nil, "", ""); w.Code != 401 {
 			t.Fatal(w.Code)
 		}
@@ -111,6 +111,13 @@ func TestPostgresHTTPFlow(t *testing.T) {
 		t.Fatal("configuração operacional ausente")
 	}
 	cookie := login.Result().Cookies()[0]
+	if w := request(h, "GET", "/api/v1/dashboard?limit=101", "", cookie, "", ""); w.Code != 400 {
+		t.Fatal(w.Code)
+	}
+	if w := request(h, "GET", "/api/v1/dashboard?limit=20", "", cookie, "", ""); w.Code != 200 || !strings.Contains(w.Body.String(), `"total":0`) {
+		t.Fatal(w.Code, w.Body.String())
+	}
+
 	if w := request(h, "POST", "/api/v1/endpoints", `{"name":"Teste","hostname":"example.com"}`, cookie, "", origin); w.Code != 403 {
 		t.Fatal("CSRF ausente aceito", w.Code)
 	}
