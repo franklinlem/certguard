@@ -19,11 +19,23 @@ Qualquer mudança de firewall, DNS de serviços existentes, redes compartilhadas
 ## Gate de homologação
 - CI verde, build das imagens, migrations, `/health` e `/ready`.
 - Certificado HTTPS, isolamento dos ambientes, recursos e logs.
-- Testes do fluxo de monitoramento e autenticação quando implementados; esta etapa isolada não habilita o MVP.
+- Testes do fluxo de monitoramento/autenticação, canais, entregas e métricas; CI isolada não conclui homologação.
 - Backup/restore em banco descartável e rollback da aplicação para commit anterior.
 - Registrar evidências antes de propor produção. Não habilitar deploy de produção até validação de homologação.
 
 ## Backup e rollback
-Use pg_dump em formato custom do banco específico. Armazene backup criptografado fora da VPS; secrets e futura encryption key em armazenamento separado. Teste pg_restore em banco descartável e confira migrações, contagens e integridade antes de qualquer restauração real.
+Use pg_dump em formato custom do banco específico. Armazene backup criptografado fora da VPS; secrets e encryption key em armazenamento separado. Teste pg_restore em banco descartável e confira migrações, contagens e integridade antes de qualquer restauração real.
 
 Rollback inicial: selecionar imagem/commit anterior; não executar down -v, prune de volumes, DROP DATABASE ou rollback de schema automático. Migração inicial é aditiva. Mudanças destrutivas futuras precisam de plano e autorização.
+
+## Agendamento e retenção
+
+A etapa 03 adiciona a migração 003, que inicializa agendas sem apagar histórico. Na homologação, comece com ambas as tarefas desabilitadas. Cadastre um destino autorizado, habilite o agendador e confirme persistência, cadência e pausa. Avalie o pool adicional de `CHECK_WORKERS + 2` conexões e recursos da VPS. Retenção permanece desabilitada até revisar janela, backup e autorização para remoção definitiva. Consulte [operação](scheduler.md). Não reinicie serviços compartilhados nem altere o Traefik global.
+
+## Entregas de alertas
+
+Etapa 06 requer migração 005 e chave externa somente para cadastrar/ativar canais. DELIVERY_ENABLED=false permanece padrão. Antes de habilitar em homologação, valide destinatário/receptor autorizado, backup separado da chave, orçamento de conexões (CHECK_WORKERS+2) e backlog. Nunca trocar a chave de instalação existente sem migração. Consulte [operação](notifications.md). Nenhum envio ou alteração da VPS foi realizado nesta entrega.
+
+## Gate consolidado
+
+Seguir [roteiro de homologação](homologacao.md). Fixar SHA e schema esperado (1–6), verificar readiness, revisar backlog/flags, backup separado da chave e compatibilidade do rollback. METRICS_TOKEN vazio mantém endpoint desabilitado; coletor interno é configuração posterior, sem instalação automática. PRs e dependências ainda precisam ser integrados/revalidados antes de uma versão estável.

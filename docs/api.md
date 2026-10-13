@@ -1,9 +1,37 @@
-# API nesta etapa
+# API implementada — etapa 07
 
-`GET /health`: 200 se processo responde. `GET /ready`: 200 se PostgreSQL responde ao Ping, 503 caso contrário. Não revela URL, credenciais ou erro interno.
+Todas as respostas de erro usam `{ "error": "mensagem em português" }`, sem SQL, secrets ou dados internos. Corpos JSON limitados a 8 KiB, campos desconhecidos rejeitados.
 
-O contrato implementado está em openapi.yaml. Rotas `/api/v1` do planejamento ainda não foram implementadas. Nenhum endpoint de verificação arbitrária será exposto sem autenticação e limites de uso.
+| Método | Rota | Acesso / comportamento |
+|---|---|---|
+| GET | /health | Público: processo disponível |
+| GET | /ready | Público: PostgreSQL e schema esperado completos |
+| POST | /api/v1/auth/login | Origin exata; e-mail/senha; retorna usuário, csrf_token e cookie |
+| GET | /api/v1/auth/me | Sessão válida; retorna usuário e csrf_token |
+| POST | /api/v1/auth/logout | Sessão, Origin e CSRF; revoga sessão |
+| GET | /api/v1/alerts | Eventos e indicadores; sessão, filtros de estado/endpoint e paginação |
+| GET | /api/v1/dashboard | Indicadores globais e endpoints paginados; sessão obrigatória |
+| GET/POST | /api/v1/endpoints | Lista paginada / cadastra |
+| GET/PATCH/DELETE | /api/v1/endpoints/{id} | Consulta / alteração parcial / arquivamento |
+| POST | /api/v1/endpoints/{id}/check | Inspeção TLS síncrona, resultado persistido |
+| GET | /api/v1/endpoints/{id}/checks | Histórico, inclusive de endpoint arquivado |
 
-CLI: `certguard check hostname`, porta fixa 443. JSON inclui hostname, checked_at, duration_ms, status, code e, quando disponíveis, resolved_ip, tls_version, cipher_suite, certificate, chain, days_remaining, hostname_valid e chain_valid.
+Rotas de endpoints exigem sessão; mutações exigem Origin e X-CSRF-Token. Sem bearer tokens nesta etapa. Paginação: limit=1..100 (padrão 50), offset=0..100000 (padrão 0). Listas retornam items, limit e offset.
 
-Códigos: success, blocked_target, dns_error, connection_error, connection_timeout, connection_refused, tls_error, certificate_expired, certificate_not_yet_valid, hostname_mismatch, untrusted_chain, internal_error. `connection_error` complementa o planejamento para falhas de rede que não são recusa nem timeout.
+Cadastro: name, hostname; opcionais port=443, enabled=true, interval_minutes=360, warning_days=30 e critical_days=7. Intervalo 5..10080, warning > critical >=0, warning <=36500. O intervalo controla a cadência automática quando o agendador estiver habilitado, acrescido de jitter de até 10%. DELETE arquiva e permite recadastrar o mesmo hostname como novo endpoint.
+
+Check retorna 201 com id, endpoint_id e result. Resultado de certificado inválido também retorna 201: o check foi registrado; consulte result.code/status. Conflito/lock/cooldown/pausado: 409; limite global de concorrência: 429. Credenciais/sessão inválidas: 401; origem/CSRF: 403; banco indisponível: 503.
+
+Detalhes e schemas: openapi.yaml. Códigos do motor: success, blocked_target, dns_error, connection_error, connection_timeout, connection_refused, tls_error, certificate_expired, certificate_not_yet_valid, hostname_mismatch, untrusted_chain e internal_error.
+
+Login e `/auth/me` acrescentam `background`: `scheduler_enabled`, `check_workers`, `retention_enabled`, `retention_days`. São configurações desta instância, não uma medição de saúde do executor. Endpoints incluem `next_check_at` anulável. Check manual também atualiza a agenda; pausa/arquivo removem a próxima execução. Retenção habilitada pode reduzir o histórico, preservando sempre o último resultado.
+
+Dashboard: `summary` contém total, enabled, paused, healthy, warning, critical, errors, unchecked e expiring_30_days. `items` segue o endpoint acrescido de `latest` (Result ou null); `generated_at` identifica o snapshot. Limite/offset iguais aos endpoints. Indicadores incluem pausados e excluem arquivados. Status do último check do hostname/porta atuais; vencimento entre agora e 30 dias, excluindo expirados. Não dispara checks. Veja ADR-006.
+
+Alertas: `state=active` por padrão (all/active/resolved), `endpoint_id` UUID opcional, limit/offset existentes. Retorna items, summary, generated_at, limit e offset. summary inclui active, critical (ativos), resolved (problemas resolvidos) e info (recuperações); contadores independem do filtro state/página. Eventos incluem snapshot e referência check_id anulável após retenção. Endpoint inexistente retorna lista vazia. Sem envio ou resolução manual.
+
+Canais: GET/POST `/api/v1/alert-channels`; PATCH/DELETE `/{id}`. POST recebe type/name/config, sempre cria pausado. PATCH permite somente name/enabled; configuração/destino imutáveis. Até 20 não arquivados. GET retorna items com id/type/name/enabled/created_at, sem segredos. Mutações exigem sessão/Origin/CSRF; chave ausente dá 503 no cadastro/ativação.
+
+Entregas: GET `/api/v1/alert-deliveries?event_id=UUID&limit=20&offset=0`, event_id opcional. Retorna items/limit/offset com estado, contagem e último código. Sem payload ou configuração cifrada na resposta. Não existe envio de teste/retry manual. Sessão acrescenta notifications.configured/delivery_enabled.
+
+`GET /metrics` exige METRICS_TOKEN bearer separado (vazio: 404; inválido: 401; coleta falha: 503). Resposta text/plain Prometheus 0.0.4, no-store, deadline 3s. Apenas API interna; proxy web bloqueia /metrics e /api/metrics. Não usa sessão/CSRF nem expõe hostnames/UUIDs/segredos. Referência de famílias em observability.md.
