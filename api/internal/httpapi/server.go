@@ -20,7 +20,15 @@ func Handler(db Pinger) http.Handler {
 	mux.HandleFunc("GET /ready", func(w http.ResponseWriter, r *http.Request) {
 		ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
 		defer cancel()
-		if db == nil || db.Ping(ctx) != nil {
+		unavailable := db == nil
+		if db != nil {
+			if checker, ok := db.(interface{ Ready(context.Context) error }); ok {
+				unavailable = checker.Ready(ctx) != nil
+			} else {
+				unavailable = db.Ping(ctx) != nil
+			}
+		}
+		if unavailable {
 			respond(w, 503, "unavailable")
 			return
 		}

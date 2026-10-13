@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-func Database(t *testing.T) *pgxpool.Pool {
+func Database(t testing.TB) *pgxpool.Pool {
 	t.Helper()
 	url := os.Getenv("TEST_DATABASE_URL")
 	if url == "" {

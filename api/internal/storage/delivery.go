@@ -237,6 +237,9 @@ func (s *Store) DeliverOne(ctx context.Context, send alerts.Send) (bool, error) 
 	if err != nil {
 		return false, err
 	}
+	if err = recordDeliveryMetrics(ctx, tx, outcome.Accepted); err != nil {
+		return false, err
+	}
 	return true, tx.Commit(ctx)
 }
 

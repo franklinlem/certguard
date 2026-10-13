@@ -14,3 +14,5 @@
 | Supply chain | Imagens, dependências, CI | Lockfiles, testes, auditorias | Renovar imagens e revisar ações/dependências |
 
 Etapa 06: chave perdida ou trocada pode impedir decriptação; preservar banco/chave separadamente e validar restauração. Queda após aceite pode repetir mensagens; receptor webhook deve deduplicar ID. SMTP não garante exatamente uma entrega. Chave não protege um processo já comprometido com acesso ao segredo; isolar app/segredos e limitar acesso administrativo.
+
+Etapa 07: métricas revelam apenas agregados e têm bearer independente, acesso interno, no-store e timeout. Contadores globais exigem coleta por banco para evitar dupla soma de réplicas. Readiness detecta schema incompatível, sem divulgar SQL/versão. Benchmark de leitura não certifica defesa contra DoS nem carga de escrita da VPS; limites devem ser medidos na homologação. Backup/restore CI nunca usa banco real; chave externa continua dependência de restauração dos canais.

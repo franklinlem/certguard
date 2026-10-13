@@ -1,4 +1,4 @@
-# Segurança — etapa 06
+# Segurança — etapa 07
 
 SSRF e inspeção estão nos ADR-002/003. Somente porta 443 e IPs aprovados; DNS fixado no dial. Nenhum bypass por ambiente. Certificados e seus metadados são dados não confiáveis: JSON e renderização como texto, sem HTML recebido do alvo.
 
@@ -19,3 +19,5 @@ O agendador inspeciona somente endpoints ativos cadastrados pelo administrador. 
 Eventos são consultáveis apenas com sessão administrativa. Regras não iniciam conexões; o executor separado entrega somente em canais ativos autorizados; observações e destinos não confiáveis são renderizados como texto. Eventos persistem junto do check, sob lock, sem parâmetros SQL interpolados. Retenção dos checks apenas anula a referência e mantém o snapshot. Autorização para implantação e transporte externo continua independente desta entrega.
 
 Configurações de canais cifradas com AES-256-GCM e AAD. Chave fora do banco; validação na ativação/partida do executor. Cadastro não envia teste e começa pausado. SMTP exige TLS antes de autenticação; webhook valida TLS, DNS público integral, IP fixo, sem redirects/proxy e HMAC. Erros remotos sanitizados. API devolve apenas metadados. Veja ADR-008 e operação para backup, backlog e limites de idempotência.
+
+Métricas opt-in com token separado, comparação constante e deadline; resposta sem identificação/segredos. Nginx encaminha apenas /api/v1, /api/health e /api/ready, bloqueando /metrics e demais /api. Readiness rejeita versões ausentes/futuras. Schema e índices aditivos não dispensam revisão de compatibilidade/rollback. Veja roteiro de homologação.

@@ -1,5 +1,11 @@
 # Histórico
 
+## Etapa 07 — em revisão
+- Métricas bearer opt-in com contadores/histograma duráveis e gauges sem identificadores.
+- Readiness de schema e proxy restrito para rotas operacionais.
+- Benchmark/smoke PostgreSQL, E2E desktop/mobile e ensaio dump/restore descartável.
+- Revisão de PRs e roteiro de homologação; sem merge ou alteração da VPS.
+
 ## Etapa 06 — em revisão
 - Canais SMTP/webhook cifrados, pausados no cadastro e ativação explícita.
 - Outbox transacional, retries limitados, cancelamento e histórico de estado.

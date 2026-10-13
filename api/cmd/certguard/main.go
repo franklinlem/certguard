@@ -136,6 +136,10 @@ func run() error {
 	if err != nil {
 		return err
 	}
+	app.MetricsToken = os.Getenv("METRICS_TOKEN")
+	if err = httpapi.ValidateMetricsToken(app.MetricsToken); err != nil {
+		return err
+	}
 	app.Background = cfg
 	app.DeliveryEnabled = deliver
 	if cfg.Enabled || cfg.RetentionEnabled || deliver {

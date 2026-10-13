@@ -14,10 +14,11 @@ Monitor self-hosted de certificados TLS, com validação de destinos e proteçã
 - Retenção opt-in em lotes, preservando o último resultado de cada endpoint.
 - Dashboard global, status por endpoint, detalhes de certificado e gráfico acessível de histórico.
 - Motor de alertas com deduplicação, resolução e histórico de eventos observados.
+- Métricas protegidas, contadores duráveis, readiness de schema e ensaio CI de backup/restauração.
 - Docker Compose e GitHub Actions com integração PostgreSQL e E2E.
 - Planejamento, decisões técnicas, modelo de ameaças e roteiro de homologação.
 
-Entregas por SMTP/webhook estão implementadas e desabilitadas por padrão; recuperação de senha e hardening permanecem pendentes. As verificações manuais estão restritas ao administrador autenticado.
+Entregas por SMTP/webhook estão implementadas e desabilitadas por padrão; recuperação de senha, retenção de eventos/entregas e rotação assistida de chave permanecem pendentes. As verificações manuais estão restritas ao administrador autenticado.
 
 ## Desenvolvimento
 Requisitos: Go 1.27.2, Node.js 22.23.2+ e Docker com Compose v2.
@@ -98,3 +99,9 @@ Novos checks registram problemas e recuperações, deduplicando repetições. Co
 Canais novos começam pausados. Configurações são cifradas com chave externa; API não retorna URL, segredo, senha ou destinatário. `DELIVERY_ENABLED=false` mantém fila preservada; habilitar processa pendências. Use somente destinos autorizados e valide em homologação.
 
 [Operação e backup da chave](docs/notifications.md), [plano](docs/plano-etapa-06.md), [ADR-008](docs/adr/008-delivery-outbox.md) e [validação](docs/validation-etapa-06.md).
+
+## Hardening e homologação (etapa 07)
+
+`/ready` verifica banco e migrações esperadas. `/metrics` é opt-in por bearer separado, somente na API interna; não é publicado pelo proxy web. Contadores sobrevivem à retenção dos checks. Consulte [observabilidade](docs/observability.md).
+
+[Revisão dos PRs](docs/revisao-prs-etapa-07.md), [roteiro de homologação](docs/homologacao.md), [plano](docs/plano-etapa-07.md), [ADR-009](docs/adr/009-observability-readiness.md) e [validação](docs/validation-etapa-07.md). Homologação/produção não executadas; CI e benchmark não substituem validação da VPS.

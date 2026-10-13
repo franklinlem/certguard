@@ -1,9 +1,9 @@
 openapi: 3.0.3
 info:
   title: CertGuard — API administrativa
-  version: 0.0.6
+  version: 0.0.7
   description: API administrativa com monitoramento TLS, eventos, canais cifrados
-    e fila de entregas SMTP/webhook.
+    e fila de entregas SMTP/webhook. Observabilidade protegida e readiness de schema.
 components:
   securitySchemes:
     session:
@@ -11,6 +11,10 @@ components:
       in: cookie
       name: __Host-certguard_session
       description: Em HTTP local, o cookie chama-se certguard_session.
+    metricsBearer:
+      type: http
+      scheme: bearer
+      description: METRICS_TOKEN independente de sessão; endpoint somente na API interna.
   schemas:
     Error:
       type: object
@@ -1809,3 +1813,21 @@ paths:
         schema:
           type: string
           format: uuid
+  /metrics:
+    get:
+      summary: Métricas Prometheus autenticadas; 404 se desabilitadas
+      security:
+      - metricsBearer: []
+      responses:
+        '200':
+          description: 30 séries operacionais, sem dados identificadores
+          content:
+            text/plain:
+              schema:
+                type: string
+        '401':
+          description: Bearer ausente/inválido
+        '404':
+          description: METRICS_TOKEN vazio
+        '503':
+          description: Coleta indisponível ou fora do prazo
