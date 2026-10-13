@@ -32,7 +32,7 @@ make dev
 Crie o primeiro administrador sem colocar a senha em argumentos ou arquivos:
 
 ```sh
-read -r -s -p 'Senha inicial (12–72 bytes): ' CERTGUARD_BOOTSTRAP_PASSWORD
+read -r -s -p 'Senha inicial (no mínimo 10 caracteres): ' CERTGUARD_BOOTSTRAP_PASSWORD
 printf '%s' "$CERTGUARD_BOOTSTRAP_PASSWORD" | docker compose --env-file .env --project-name certguard-local -f deploy/compose.yaml exec -T api certguard admin-create seu-email@exemplo.com
 unset CERTGUARD_BOOTSTRAP_PASSWORD
 ```
@@ -109,3 +109,7 @@ Canais novos começam pausados. Configurações são cifradas com chave externa;
 ## Integração e inventário (13/10/2026)
 
 PRs 1–11 integrados na main. Consulte [evidências da integração](docs/integracao-prs-2026-10-13.md), [inventário da Contabo](docs/inventario-homologacao-2026-10-13.md) e [planejamento desta etapa](docs/plano-integracao-homologacao.md). DNS dos dois ambientes criado; aplicação ainda não implantada e HTTPS da homologação pendente. Produção depende do aceite de homologação.
+
+## Homologação inicial (13/10/2026)
+
+Disponível em https://certguard-dev.franklem.uk com HTTPS válido. [Validação inicial e pendências](docs/validation-etapa-08.md): API/schema prontos, acesso sem sessão recusado e métricas não expostas. [Criar administrador por entrada segura](docs/bootstrap-homologacao.md). Inspeção interna final e backup no frank-note2 ainda pendentes; produção não implantada. [Configuração e isolamento no Coolify](docs/adr/010-coolify-isolation.md).

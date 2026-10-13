@@ -189,3 +189,55 @@ test("falha ao carregar dashboard não aparece como ausência de endpoints", asy
   expect(screen.queryByText(/Nenhum endpoint nesta página/)).toBeNull();
   expect(screen.queryByRole("region", { name: "Visão geral" })).toBeNull();
 });
+
+test("leva ao formulário e histórico em cada clique sem roubar foco ao atualizar", async () => {
+  const originalScroll = Object.getOwnPropertyDescriptor(HTMLElement.prototype, "scrollIntoView");
+  const scroll = vi.fn();
+  Object.defineProperty(HTMLElement.prototype, "scrollIntoView", { configurable: true, value: scroll });
+  const endpoint = { id: "e", name: "Site", hostname: "example.com", enabled: true, last_check_at: null };
+  vi.stubGlobal("fetch", vi.fn().mockImplementation((path: string) => Promise.resolve(response(
+    path.endsWith("/auth/me")
+      ? { user: { id: "u", email: "admin@example.com" }, csrf_token: "t" }
+      : path.includes("/alerts?") ? emptyAlerts
+      : path.includes("/checks?") || path.includes("/alert-channels") || path.includes("/alert-deliveries") ? { items: [] }
+      : { items: [endpoint], summary, generated_at: "2026-10-13T12:00:00Z" }
+  ))));
+  try {
+    render(<App />);
+    const add = await screen.findByRole("button", { name: "Adicionar endpoint" });
+    await screen.findByRole("button", { name: "Detalhes e histórico" });
+    fireEvent.click(add);
+    const name = screen.getByLabelText("Nome", { exact: true });
+    expect(document.activeElement).toBe(name);
+    expect(scroll.mock.contexts.at(-1)).toBe(screen.getByRole("region", { name: "Adicionar endpoint" }));
+    expect(scroll).toHaveBeenLastCalledWith({ behavior: "instant", block: "start" });
+    fireEvent.change(name, { target: { value: "Rascunho preservado" } });
+    add.focus();
+    fireEvent.click(add);
+    expect(document.activeElement).toBe(name);
+    expect((name as HTMLInputElement).value).toBe("Rascunho preservado");
+    fireEvent.click(screen.getByRole("button", { name: "Editar" }));
+    expect(document.activeElement).toBe(screen.getByLabelText("Nome", { exact: true }));
+    expect(scroll.mock.contexts.at(-1)).toBe(screen.getByRole("region", { name: "Editar endpoint" }));
+    const details = screen.getByRole("button", { name: "Detalhes e histórico" });
+    fireEvent.click(details);
+    const title = screen.getByRole("heading", { name: "Detalhes e histórico · Site" });
+    expect(document.activeElement).toBe(title);
+    expect(scroll.mock.contexts.at(-1)).toBe(title);
+    await screen.findByText("Nenhuma verificação nesta página.");
+    const calls = scroll.mock.calls.length;
+    details.focus();
+    fireEvent.click(details);
+    expect(document.activeElement).toBe(title);
+    expect(scroll.mock.calls.length).toBe(calls + 1);
+    const refresh = screen.getByRole("button", { name: "Atualizar painel" });
+    refresh.focus();
+    fireEvent.click(refresh);
+    await screen.findByText("Painel atualizado.");
+    expect(document.activeElement).toBe(refresh);
+    expect(scroll.mock.calls.length).toBe(calls + 1);
+  } finally {
+    if (originalScroll) Object.defineProperty(HTMLElement.prototype, "scrollIntoView", originalScroll);
+    else Reflect.deleteProperty(HTMLElement.prototype, "scrollIntoView");
+  }
+});

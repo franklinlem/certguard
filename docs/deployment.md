@@ -1,6 +1,6 @@
 # Implantação planejada — Coolify e Traefik
 
-**Nenhuma implantação foi executada por esta entrega. Não aplicar configurações globais do proxy nem alterar serviços existentes.**
+**Homologação inicial implantada em 13/10/2026; produção não implantada. Consulte [evidências e pendências](validation-etapa-08.md). Não alterar configurações globais do proxy nem serviços existentes.**
 
 | Ambiente | Domínio | Projeto Compose | Banco/volume/segredos |
 |---|---|---|---|
@@ -9,9 +9,9 @@
 
 ## Preparação
 1. Fazer inventário somente leitura da VPS: recursos, redes, portas, backups, versão Coolify e proxy Traefik. Confirmar destino DNS e eventual Cloudflare.
-2. Criar aplicações/projetos separados no Coolify, usando este repositório privado e `deploy/compose.yaml`; não usar compose.dev na VPS.
+2. Criar aplicações/projetos separados no Coolify, usando este repositório privado. Na homologação inventariada, usar `/compose.coolify.yaml`, base `/` e modo Raw, conforme [ADR-010](adr/010-coolify-isolation.md); não usar compose.dev na VPS.
 3. Selecionar commit explícito. Desabilitar auto-deploy. Definir secrets distintos; senha PostgreSQL alfanumérica forte para a URL Compose.
-4. Usar integração nativa do Coolify para conectar somente `web:8080` ao Traefik existente e associar o domínio do ambiente. O nome da rede/entrypoint/certresolver será obtido do inventário; não presumir nomes nem criar segundo Traefik.
+4. Usar os labels do Compose Raw de homologação para conectar somente `web:8080` ao Traefik existente e associar o domínio do ambiente. O nome da rede/entrypoint/certresolver será obtido do inventário; não presumir nomes nem criar segundo Traefik.
 5. Não expor API/db diretamente, não montar docker.sock, não compartilhar volumes. O tráfego `/api/` no web alcança somente a API do próprio projeto.
 
 Qualquer mudança de firewall, DNS de serviços existentes, redes compartilhadas, proxy global, armazenamento ou limpeza exige revisão do impacto e autorização específica quando houver risco de interrupção/perda de dados.
@@ -39,3 +39,7 @@ Etapa 06 requer migração 005 e chave externa somente para cadastrar/ativar can
 ## Gate consolidado
 
 Seguir [roteiro de homologação](homologacao.md). Fixar SHA e schema esperado (1–6), verificar readiness, revisar backlog/flags, backup separado da chave e compatibilidade do rollback. METRICS_TOKEN vazio mantém endpoint desabilitado; coletor interno é configuração posterior, sem instalação automática. PRs e dependências foram integrados em 13/10/2026; consulte [evidências](integracao-prs-2026-10-13.md) e [inventário](inventario-homologacao-2026-10-13.md) antes da primeira implantação.
+
+## Destino de backup informado
+
+Responsável escolheu franklin@frank-note2 (servidor físico Linux Mint XFCE com Docker, Hermes, outros backups e Uptime Kuma). Verificação adiada por solicitação dele. Não é backup configurado: diretório, transporte, criptografia, retenção e restauração permanecem pendentes. Não acessar ou modificar serviços desse host sem o próximo escopo definido.
