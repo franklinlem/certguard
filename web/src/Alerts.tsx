@@ -82,8 +82,8 @@ export function Alerts({
         </button>
       </div>
       <p className="hint">
-        Eventos gerados por novas verificações. Entrega por e-mail e webhook
-        ainda não implementada. Pausar o monitoramento não confirma recuperação.
+        Eventos gerados por novas verificações. Consulte o estado dos canais e
+        das entregas abaixo. Pausar o monitoramento não confirma recuperação.
       </p>
       <label htmlFor={filterId}>Exibir eventos</label>
       <select

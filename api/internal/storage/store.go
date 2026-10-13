@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"github.com/franklinlem/certguard/api/internal/alerts"
 	"github.com/franklinlem/certguard/api/internal/auth"
 	"github.com/franklinlem/certguard/api/internal/certificate"
 	"github.com/franklinlem/certguard/api/internal/security"
@@ -18,7 +19,10 @@ var ErrInvalid = errors.New("dados inválidos")
 var ErrBusy = errors.New("verificação em andamento ou intervalo mínimo não atingido")
 var ErrDisabled = errors.New("endpoint desativado")
 
-type Store struct{ Pool *pgxpool.Pool }
+type Store struct {
+	Pool   *pgxpool.Pool
+	Cipher *alerts.Cipher
+}
 type User struct {
 	ID    string `json:"id"`
 	Email string `json:"email"`

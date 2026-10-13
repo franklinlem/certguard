@@ -1,6 +1,7 @@
 export type Session = {
   user: { id: string; email: string };
   csrf_token: string;
+  notifications?: { configured: boolean; delivery_enabled: boolean };
   background: {
     scheduler_enabled: boolean;
     check_workers: number;
@@ -123,4 +124,25 @@ export type AlertPage = {
   limit: number;
   offset: number;
   generated_at: string;
+};
+
+export type Channel = {
+  id: string;
+  type: string;
+  name: string;
+  enabled: boolean;
+  created_at: string;
+};
+export type Delivery = {
+  id: string;
+  alert_event_id: string;
+  channel_id: string;
+  channel_type: string;
+  status: string;
+  attempt_count: number;
+  last_error: string | null;
+  next_attempt_at: string | null;
+  last_attempt_at: string | null;
+  accepted_at: string | null;
+  created_at: string;
 };

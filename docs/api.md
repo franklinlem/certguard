@@ -1,4 +1,4 @@
-# API implementada — etapa 05
+# API implementada — etapa 06
 
 Todas as respostas de erro usam `{ "error": "mensagem em português" }`, sem SQL, secrets ou dados internos. Corpos JSON limitados a 8 KiB, campos desconhecidos rejeitados.
 
@@ -29,3 +29,7 @@ Login e `/auth/me` acrescentam `background`: `scheduler_enabled`, `check_workers
 Dashboard: `summary` contém total, enabled, paused, healthy, warning, critical, errors, unchecked e expiring_30_days. `items` segue o endpoint acrescido de `latest` (Result ou null); `generated_at` identifica o snapshot. Limite/offset iguais aos endpoints. Indicadores incluem pausados e excluem arquivados. Status do último check do hostname/porta atuais; vencimento entre agora e 30 dias, excluindo expirados. Não dispara checks. Veja ADR-006.
 
 Alertas: `state=active` por padrão (all/active/resolved), `endpoint_id` UUID opcional, limit/offset existentes. Retorna items, summary, generated_at, limit e offset. summary inclui active, critical (ativos), resolved (problemas resolvidos) e info (recuperações); contadores independem do filtro state/página. Eventos incluem snapshot e referência check_id anulável após retenção. Endpoint inexistente retorna lista vazia. Sem envio ou resolução manual.
+
+Canais: GET/POST `/api/v1/alert-channels`; PATCH/DELETE `/{id}`. POST recebe type/name/config, sempre cria pausado. PATCH permite somente name/enabled; configuração/destino imutáveis. Até 20 não arquivados. GET retorna items com id/type/name/enabled/created_at, sem segredos. Mutações exigem sessão/Origin/CSRF; chave ausente dá 503 no cadastro/ativação.
+
+Entregas: GET `/api/v1/alert-deliveries?event_id=UUID&limit=20&offset=0`, event_id opcional. Retorna items/limit/offset com estado, contagem e último código. Sem payload ou configuração cifrada na resposta. Não existe envio de teste/retry manual. Sessão acrescenta notifications.configured/delivery_enabled.

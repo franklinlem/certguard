@@ -1,9 +1,9 @@
 openapi: 3.0.3
 info:
   title: CertGuard — API administrativa
-  version: 0.0.5
-  description: 'API administrativa: sessões, endpoints, checks persistidos, configuração
-    de agendamento e dashboard. Eventos de alerta transacionais; sem entrega externa.'
+  version: 0.0.6
+  description: API administrativa com monitoramento TLS, eventos, canais cifrados
+    e fila de entregas SMTP/webhook.
 components:
   securitySchemes:
     session:
@@ -58,10 +58,21 @@ components:
               type: integer
               minimum: 30
               maximum: 36500
+        notifications:
+          type: object
+          required:
+          - configured
+          - delivery_enabled
+          properties:
+            configured:
+              type: boolean
+            delivery_enabled:
+              type: boolean
       required:
       - user
       - csrf_token
       - background
+      - notifications
     EndpointInput:
       type: object
       properties:
@@ -543,6 +554,209 @@ components:
         generated_at:
           type: string
           format: date-time
+    AlertChannel:
+      type: object
+      required:
+      - id
+      - type
+      - name
+      - created_at
+      - enabled
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum:
+          - smtp
+          - webhook
+        name:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        enabled:
+          type: boolean
+    AlertChannelPage:
+      type: object
+      required:
+      - items
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/AlertChannel'
+    WebhookConfig:
+      type: object
+      additionalProperties: false
+      required:
+      - url
+      - secret
+      properties:
+        url:
+          type: string
+          format: uri
+          maxLength: 2048
+          description: HTTPS porta 443, sem credenciais ou fragmento; DNS público
+            validado no envio.
+        secret:
+          type: string
+          minLength: 32
+          maxLength: 1024
+          writeOnly: true
+    SMTPConfig:
+      type: object
+      additionalProperties: false
+      required:
+      - host
+      - port
+      - username
+      - password
+      - from
+      - to
+      properties:
+        host:
+          type: string
+        port:
+          type: integer
+          enum:
+          - 465
+          - 587
+        username:
+          type: string
+          maxLength: 254
+          writeOnly: true
+        password:
+          type: string
+          maxLength: 1024
+          writeOnly: true
+        from:
+          type: string
+          format: email
+          writeOnly: true
+        to:
+          type: string
+          format: email
+          writeOnly: true
+    AlertChannelInput:
+      oneOf:
+      - type: object
+        additionalProperties: false
+        required:
+        - type
+        - name
+        - config
+        properties:
+          type:
+            type: string
+            enum:
+            - webhook
+          name:
+            type: string
+            minLength: 1
+            maxLength: 200
+          config:
+            $ref: '#/components/schemas/WebhookConfig'
+      - type: object
+        additionalProperties: false
+        required:
+        - type
+        - name
+        - config
+        properties:
+          type:
+            type: string
+            enum:
+            - smtp
+          name:
+            type: string
+            minLength: 1
+            maxLength: 200
+          config:
+            $ref: '#/components/schemas/SMTPConfig'
+    AlertChannelPatch:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        enabled:
+          type: boolean
+    AlertDelivery:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        alert_event_id:
+          type: string
+          format: uuid
+        channel_id:
+          type: string
+          format: uuid
+        channel_type:
+          type: string
+          enum:
+          - smtp
+          - webhook
+        status:
+          type: string
+          enum:
+          - pending
+          - sent
+          - failed
+          - cancelled
+        attempt_count:
+          type: integer
+        last_error:
+          type: string
+          nullable: true
+        next_attempt_at:
+          type: string
+          format: date-time
+          nullable: true
+        last_attempt_at:
+          type: string
+          format: date-time
+          nullable: true
+        accepted_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+      required:
+      - id
+      - alert_event_id
+      - channel_id
+      - channel_type
+      - status
+      - attempt_count
+      - last_error
+      - next_attempt_at
+      - last_attempt_at
+      - accepted_at
+      - created_at
+    AlertDeliveryPage:
+      type: object
+      required:
+      - items
+      - limit
+      - offset
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/AlertDelivery'
+        limit:
+          type: integer
+        offset:
+          type: integer
   parameters:
     Origin:
       name: Origin
@@ -1299,6 +1513,298 @@ paths:
           - resolved
           default: active
       - name: endpoint_id
+        in: query
+        schema:
+          type: string
+          format: uuid
+  /api/v1/alert-channels:
+    get:
+      summary: Listar até 20 canais não arquivados, sem segredos
+      security:
+      - session: []
+      responses:
+        '400':
+          description: Entrada inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Credenciais ou sessão inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Origem ou CSRF inválido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Registro não encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Conflito, pausa, lock ou cooldown
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Limite excedido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Indisponibilidade temporária
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '200':
+          description: Operação concluída
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AlertChannelPage'
+    post:
+      summary: Cadastrar canal pausado; não envia teste
+      security:
+      - session: []
+      responses:
+        '400':
+          description: Entrada inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Credenciais ou sessão inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Origem ou CSRF inválido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Registro não encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Conflito, pausa, lock ou cooldown
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Limite excedido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Indisponibilidade temporária
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '201':
+          description: Operação concluída
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AlertChannel'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AlertChannelInput'
+  /api/v1/alert-channels/{id}:
+    patch:
+      summary: Alterar nome/ativação; destino imutável
+      security:
+      - session: []
+      responses:
+        '400':
+          description: Entrada inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Credenciais ou sessão inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Origem ou CSRF inválido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Registro não encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Conflito, pausa, lock ou cooldown
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Limite excedido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Indisponibilidade temporária
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '200':
+          description: Operação concluída
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AlertChannel'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AlertChannelPatch'
+      parameters: &id001
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    delete:
+      summary: Arquivar canal e cancelar pendências
+      security:
+      - session: []
+      responses:
+        '400':
+          description: Entrada inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Credenciais ou sessão inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Origem ou CSRF inválido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Registro não encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Conflito, pausa, lock ou cooldown
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Limite excedido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Indisponibilidade temporária
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '204':
+          description: Canal arquivado; pendências canceladas
+      parameters: *id001
+  /api/v1/alert-deliveries:
+    get:
+      summary: Consultar entregas sem payload/segredos
+      security:
+      - session: []
+      responses:
+        '400':
+          description: Entrada inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Credenciais ou sessão inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Origem ou CSRF inválido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Registro não encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Conflito, pausa, lock ou cooldown
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Limite excedido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Indisponibilidade temporária
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '200':
+          description: Operação concluída
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AlertDeliveryPage'
+      parameters:
+      - $ref: '#/components/parameters/limit'
+      - $ref: '#/components/parameters/offset'
+      - name: event_id
         in: query
         schema:
           type: string

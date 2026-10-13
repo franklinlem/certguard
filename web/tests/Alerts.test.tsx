@@ -55,12 +55,9 @@ test("lista problemas ativos, filtra eventos e preserva observação sem check",
   expect(
     screen.getByText(/Removido pela retenção; observação preservada/),
   ).toBeTruthy();
-  fireEvent.change(
-    screen.getByRole("combobox", { name: "Exibir eventos" }),
-    {
-      target: { value: "all" },
-    },
-  );
+  fireEvent.change(screen.getByRole("combobox", { name: "Exibir eventos" }), {
+    target: { value: "all" },
+  });
   await waitFor(() =>
     expect(mock).toHaveBeenCalledWith(
       "/api/v1/alerts?state=all&limit=20&offset=0",
@@ -68,7 +65,7 @@ test("lista problemas ativos, filtra eventos e preserva observação sem check",
     ),
   );
   expect(
-    screen.getByText(/Entrega por e-mail e webhook ainda não implementada/),
+    screen.getByText(/Consulte o estado dos canais e das entregas/),
   ).toBeTruthy();
 });
 test("erro não aparece como lista vazia e permite nova tentativa", async () => {

@@ -29,15 +29,16 @@ func (a *App) cookieName() string {
 
 type App struct {
 	// Background é imutável após iniciar o servidor.
-	Background scheduler.Config
-	store      *storage.Store
-	origin     string
-	secure     bool
-	limiter    *auth.Limiter
-	logins     chan struct{}
-	checks     chan struct{}
-	dummy      string
-	inspect    storage.Inspect
+	Background      scheduler.Config
+	DeliveryEnabled bool
+	store           *storage.Store
+	origin          string
+	secure          bool
+	limiter         *auth.Limiter
+	logins          chan struct{}
+	checks          chan struct{}
+	dummy           string
+	inspect         storage.Inspect
 }
 
 func NewApp(store *storage.Store, origin string, local bool) (*App, error) {
@@ -140,7 +141,7 @@ func (a *App) Handler() http.Handler {
 	mux.HandleFunc("GET /api/v1/auth/me", func(w http.ResponseWriter, r *http.Request) {
 		u, t, ok := a.session(w, r)
 		if ok {
-			send(w, 200, map[string]any{"user": u, "csrf_token": auth.CSRF(t), "background": a.Background})
+			send(w, 200, map[string]any{"user": u, "csrf_token": auth.CSRF(t), "background": a.Background, "notifications": map[string]bool{"configured": a.store.Cipher != nil, "delivery_enabled": a.DeliveryEnabled}})
 		}
 	})
 	mux.HandleFunc("POST /api/v1/auth/logout", a.protected(func(w http.ResponseWriter, r *http.Request) {
@@ -150,6 +151,56 @@ func (a *App) Handler() http.Handler {
 		}
 		a.setCookie(w, "", -1)
 		w.WriteHeader(204)
+	}))
+	mux.HandleFunc("GET /api/v1/alert-channels", a.protected(func(w http.ResponseWriter, r *http.Request) {
+		items, err := a.store.Channels(r.Context())
+		if err != nil {
+			resultError(w, err)
+			return
+		}
+		send(w, 200, map[string]any{"items": items})
+	}))
+	mux.HandleFunc("POST /api/v1/alert-channels", a.protected(func(w http.ResponseWriter, r *http.Request) {
+		var i storage.ChannelInput
+		if decode(w, r, &i) != nil {
+			fail(w, 400, "Configuração de canal inválida.")
+			return
+		}
+		c, err := a.store.CreateChannel(r.Context(), i)
+		if err != nil {
+			resultError(w, err)
+			return
+		}
+		send(w, 201, c)
+	}))
+	mux.HandleFunc("PATCH /api/v1/alert-channels/{id}", a.protected(a.patchChannel))
+	mux.HandleFunc("DELETE /api/v1/alert-channels/{id}", a.protected(func(w http.ResponseWriter, r *http.Request) {
+		id, ok := idFrom(w, r)
+		if !ok {
+			return
+		}
+		if _, err := a.store.UpdateChannel(r.Context(), id, nil, nil, true); err != nil {
+			resultError(w, err)
+			return
+		}
+		w.WriteHeader(204)
+	}))
+	mux.HandleFunc("GET /api/v1/alert-deliveries", a.protected(func(w http.ResponseWriter, r *http.Request) {
+		l, o, ok := pagination(w, r)
+		if !ok {
+			return
+		}
+		id := r.URL.Query().Get("event_id")
+		if id != "" && !uuidPattern.MatchString(id) {
+			fail(w, 400, "Identificador inválido.")
+			return
+		}
+		items, err := a.store.Deliveries(r.Context(), id, l, o)
+		if err != nil {
+			resultError(w, err)
+			return
+		}
+		send(w, 200, map[string]any{"items": items, "limit": l, "offset": o})
 	}))
 	mux.HandleFunc("GET /api/v1/alerts", a.protected(func(w http.ResponseWriter, r *http.Request) {
 		l, o, ok := pagination(w, r)
@@ -262,7 +313,7 @@ func (a *App) login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	a.setCookie(w, token, int(auth.SessionAge.Seconds()))
-	send(w, 200, map[string]any{"user": u, "csrf_token": auth.CSRF(token), "background": a.Background})
+	send(w, 200, map[string]any{"user": u, "csrf_token": auth.CSRF(token), "background": a.Background, "notifications": map[string]bool{"configured": a.store.Cipher != nil, "delivery_enabled": a.DeliveryEnabled}})
 }
 
 var uuidPattern = regexp.MustCompile(`^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`)
@@ -424,4 +475,49 @@ func (a *App) history(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	send(w, 200, map[string]any{"items": v, "limit": l, "offset": o})
+}
+
+func (a *App) patchChannel(w http.ResponseWriter, r *http.Request) {
+	id, ok := idFrom(w, r)
+	if !ok {
+		return
+	}
+	var data map[string]json.RawMessage
+	if decode(w, r, &data) != nil || len(data) == 0 {
+		fail(w, 400, "Alteração de canal inválida.")
+		return
+	}
+	var name *string
+	var enabled *bool
+	for k, raw := range data {
+		if string(raw) == "null" {
+			fail(w, 400, "Alteração de canal inválida.")
+			return
+		}
+		switch k {
+		case "name":
+			var v string
+			if json.Unmarshal(raw, &v) != nil {
+				fail(w, 400, "Nome inválido.")
+				return
+			}
+			name = &v
+		case "enabled":
+			var v bool
+			if json.Unmarshal(raw, &v) != nil {
+				fail(w, 400, "Ativação inválida.")
+				return
+			}
+			enabled = &v
+		default:
+			fail(w, 400, "Campo de canal não permitido.")
+			return
+		}
+	}
+	c, err := a.store.UpdateChannel(r.Context(), id, name, enabled, false)
+	if err != nil {
+		resultError(w, err)
+		return
+	}
+	send(w, 200, c)
 }

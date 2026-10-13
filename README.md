@@ -2,7 +2,7 @@
 
 Monitor self-hosted de certificados TLS, com validação de destinos e proteção SSRF.
 
-**Estado: autenticação, endpoints, verificações manuais, agendamento automático opt-in, dashboard e eventos de alerta. Ainda não é o MVP completo nem uma versão pronta para produção.**
+**Estado: autenticação, endpoints, verificações manuais, agendamento automático opt-in, dashboard, eventos e entregas de alerta opt-in. Ainda não é o MVP completo nem uma versão pronta para produção.**
 
 ## Entregue nesta etapa
 - Go: inspeção TLS via CLI, validação de cadeia/hostname, SANs, fingerprint, validade e classificação.
@@ -17,7 +17,7 @@ Monitor self-hosted de certificados TLS, com validação de destinos e proteçã
 - Docker Compose e GitHub Actions com integração PostgreSQL e E2E.
 - Planejamento, decisões técnicas, modelo de ameaças e roteiro de homologação.
 
-Entrega de alertas por SMTP/webhook e recuperação de senha pertencem aos próximos incrementos. As verificações manuais estão restritas ao administrador autenticado.
+Entregas por SMTP/webhook estão implementadas e desabilitadas por padrão; recuperação de senha e hardening permanecem pendentes. As verificações manuais estão restritas ao administrador autenticado.
 
 ## Desenvolvimento
 Requisitos: Go 1.27.2, Node.js 22.23.2+ e Docker com Compose v2.
@@ -89,6 +89,12 @@ Indicadores incluem todos os endpoints não arquivados, mesmo fora da página at
 
 ## Eventos de alerta (etapa 05)
 
-Novos checks registram problemas e recuperações, deduplicando repetições. Consulte **Alertas e eventos** no painel e expanda a observação original. Não há envio por e-mail/webhook nesta entrega; canais e retries serão acrescentados no próximo incremento.
+Novos checks registram problemas e recuperações, deduplicando repetições. Consulte **Alertas e eventos** no painel e expanda a observação original. A etapa 06 acrescenta canais e envio opt-in por e-mail/webhook; consulte a operação antes de habilitar.
 
 [Planejamento](docs/plano-etapa-05.md), [regras e operação](docs/alerts.md), [ADR-007](docs/adr/007-alert-episodes.md) e [validação](docs/validation-etapa-05.md).
+
+## Canais e entregas (etapa 06)
+
+Canais novos começam pausados. Configurações são cifradas com chave externa; API não retorna URL, segredo, senha ou destinatário. `DELIVERY_ENABLED=false` mantém fila preservada; habilitar processa pendências. Use somente destinos autorizados e valide em homologação.
+
+[Operação e backup da chave](docs/notifications.md), [plano](docs/plano-etapa-06.md), [ADR-008](docs/adr/008-delivery-outbox.md) e [validação](docs/validation-etapa-06.md).

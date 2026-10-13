@@ -31,3 +31,7 @@ Rollback inicial: selecionar imagem/commit anterior; não executar down -v, prun
 ## Agendamento e retenção
 
 A etapa 03 adiciona a migração 003, que inicializa agendas sem apagar histórico. Na homologação, comece com ambas as tarefas desabilitadas. Cadastre um destino autorizado, habilite o agendador e confirme persistência, cadência e pausa. Avalie o pool adicional de `CHECK_WORKERS + 1` conexões e recursos da VPS. Retenção permanece desabilitada até revisar janela, backup e autorização para remoção definitiva. Consulte [operação](scheduler.md). Não reinicie serviços compartilhados nem altere o Traefik global.
+
+## Entregas de alertas
+
+Etapa 06 requer migração 005 e chave externa somente para cadastrar/ativar canais. DELIVERY_ENABLED=false permanece padrão. Antes de habilitar em homologação, valide destinatário/receptor autorizado, backup separado da chave, orçamento de conexões (CHECK_WORKERS+2) e backlog. Nunca trocar a chave de instalação existente sem migração. Consulte [operação](notifications.md). Nenhum envio ou alteração da VPS foi realizado nesta entrega.

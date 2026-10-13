@@ -75,6 +75,8 @@ jobs:
       PUBLIC_APP_URL: http://localhost:8088
       SCHEDULER_ENABLED: "false"
       RETENTION_ENABLED: "false"
+      DELIVERY_ENABLED: "false"
+      ALERT_ENCRYPTION_KEY: ""
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Validar e subir ambiente descartável

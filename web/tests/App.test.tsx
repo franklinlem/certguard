@@ -63,6 +63,8 @@ test("carrega endpoints reais e envia check autenticado com CSRF", async () => {
     last_check_at: null,
   };
   const fetchMock = vi.fn().mockImplementation((path: string) => {
+    if (path.includes("/alert-channels") || path.includes("/alert-deliveries"))
+      return Promise.resolve(response({ items: [] }));
     if (path.includes("/alerts?"))
       return Promise.resolve(response(emptyAlerts));
     if (path.endsWith("/auth/me"))
@@ -128,32 +130,34 @@ test("mostra agenda habilitada, próxima execução e retenção", async () => {
     vi.fn().mockImplementation((path: string) =>
       Promise.resolve(
         response(
-          path.includes("/alerts?")
-            ? emptyAlerts
-            : path.endsWith("/auth/me")
-              ? {
-                  user: { id: "u", email: "admin@example.com" },
-                  csrf_token: "t",
-                  background: {
-                    scheduler_enabled: true,
-                    retention_enabled: true,
-                    retention_days: 180,
-                  },
-                }
-              : {
-                  summary,
-                  generated_at: "2026-10-12T12:00:00Z",
-                  items: [
-                    {
-                      id: "e",
-                      name: "Site",
-                      hostname: "example.com",
-                      enabled: true,
-                      last_check_at: null,
-                      next_check_at: "2026-10-13T12:00:00Z",
+          path.includes("/alert-channels") || path.includes("/alert-deliveries")
+            ? { items: [] }
+            : path.includes("/alerts?")
+              ? emptyAlerts
+              : path.endsWith("/auth/me")
+                ? {
+                    user: { id: "u", email: "admin@example.com" },
+                    csrf_token: "t",
+                    background: {
+                      scheduler_enabled: true,
+                      retention_enabled: true,
+                      retention_days: 180,
                     },
-                  ],
-                },
+                  }
+                : {
+                    summary,
+                    generated_at: "2026-10-12T12:00:00Z",
+                    items: [
+                      {
+                        id: "e",
+                        name: "Site",
+                        hostname: "example.com",
+                        enabled: true,
+                        last_check_at: null,
+                        next_check_at: "2026-10-13T12:00:00Z",
+                      },
+                    ],
+                  },
         ),
       ),
     ),

@@ -77,6 +77,19 @@ test("administrador cadastra, edita, pausa e arquiva endpoint sem acessar destin
   await expect(
     page.getByText("Nenhum evento neste filtro e página."),
   ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Canais e entregas", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("Nenhuma entrega nesta página.", { exact: true }),
+  ).toBeVisible();
+  await expect(page.getByText(/Cadastro de canais indisponível/)).toBeVisible();
+  await page
+    .getByRole("button", { name: "Atualizar entregas", exact: true })
+    .click();
+  await expect(
+    page.getByText("Nenhuma entrega nesta página.", { exact: true }),
+  ).toBeVisible();
   await page.getByRole("button", { name: "Sair", exact: true }).click();
   await expect(
     page.getByRole("button", { name: "Entrar", exact: true }),

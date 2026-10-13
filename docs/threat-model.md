@@ -10,5 +10,7 @@
 | SQL injection | Banco | SQL fixo, parâmetros pgx | Manter parâmetros no CRUD |
 | Vazamento de secrets | Logs e repositório | Mensagens sanitizadas, .gitignore | Secret scanning e rotação no provisionamento |
 | Storage exhaustion | Histórico infinito | Histórico de checks manuais | Retenção e quotas com scheduler |
-| Alert storm / webhook SSRF | Saída de mensagens | Alertas ainda indisponíveis | Dedupe, assinatura e política SSRF própria |
+| Alert storm / webhook SSRF | Saída de mensagens | Dedupe, limite de canais/tentativas, HMAC, TLS e DNS/IP público fixado | Monitorar volume e validar receptor na homologação |
 | Supply chain | Imagens, dependências, CI | Lockfiles, testes, auditorias | Renovar imagens e revisar ações/dependências |
+
+Etapa 06: chave perdida ou trocada pode impedir decriptação; preservar banco/chave separadamente e validar restauração. Queda após aceite pode repetir mensagens; receptor webhook deve deduplicar ID. SMTP não garante exatamente uma entrega. Chave não protege um processo já comprometido com acesso ao segredo; isolar app/segredos e limitar acesso administrativo.
