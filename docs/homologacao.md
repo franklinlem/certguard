@@ -1,6 +1,6 @@
 # Roteiro de homologação — CertGuard
 
-Estado: inventário somente leitura executado em 13/10/2026; implantação inicial executada; aceite completo ainda pendente. Consulte [evidências atuais](validation-etapa-08.md). Consulte [inventário](inventario-homologacao-2026-10-13.md) e [integração](integracao-prs-2026-10-13.md). Não é autorização para modificar recursos compartilhados.
+Estado: inventário somente leitura executado em 13/10/2026; implantação inicial executada; aceite completo ainda pendente. Consulte [evidências atuais](validation-preparacao-producao.md) e [implantação inicial](validation-etapa-08.md). Consulte [inventário](inventario-homologacao-2026-10-13.md) e [integração](integracao-prs-2026-10-13.md). Não é autorização para modificar recursos compartilhados.
 
 ## 1. Base revisável
 
@@ -15,11 +15,11 @@ Registrar versões Docker/Compose/Coolify/Traefik, serviços existentes, CPU/mem
 | Item | Evidência a preencher |
 |---|---|
 | Host/acesso e responsável | Contabo 158.220.120.2, terminal autenticado Coolify; Franklin |
-| Recursos livres e margem para build/migração | 4974 MiB disponíveis e 78G livres; pico de build ainda não medido |
-| Serviços/volumes/redes existentes a preservar | Inventariados; 25 containers existentes, nenhuma instância CertGuard |
-| Rede e integração nativa do proxy | Traefik v3.7, http/https, letsencrypt; futura rede do recurso ainda não criada |
+| Recursos livres e margem para build/migração | 4998 MiB disponíveis e 76G livres em 13/10 às 17:02; pico de build ainda não medido |
+| Serviços/volumes/redes existentes a preservar | 25 containers anteriores preservados (IDs/nomes); CertGuard isolado e saudável |
+| Rede e integração nativa do proxy | Traefik v3.7, http/https, letsencrypt; somente web na rede coolify, database interna |
 | DNS e HTTPS do domínio de homologação | A para VPS confirmado; HTTPS confiável Let's Encrypt verificado em 13/10/2026 |
-| Commit/imagens e CI | Código 66db5902 implantado; CI aprovada; imagens construídas no Coolify |
+| Commit/imagens e CI | Código 93d1f5af implantado; CI aprovada; imagens construídas no Coolify |
 | Destino de backup fora da VPS | franklin@frank-note2 escolhido; configuração/verificação adiada e ainda pendente |
 
 Qualquer mudança com risco de interrupção/perda de dados exige autorização específica após apresentar impacto e rollback concretos. Não instalar segundo Traefik nem alterar firewall/redes/volumes de outros serviços por conveniência.

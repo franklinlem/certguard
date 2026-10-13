@@ -83,10 +83,12 @@ jobs:
       METRICS_TOKEN: ""
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - name: Validar Compose de homologação sem acessar infraestrutura
+      - name: Validar Compose dos dois ambientes sem acessar infraestrutura
         run: |
           docker compose -f compose.coolify.yaml config --format json | python3 scripts/check-coolify-compose.py
           COOLIFY_RESOURCE_UUID=certguard-ci-identity docker compose -f compose.coolify.yaml config --format json | python3 scripts/check-coolify-compose.py certguard-ci-identity
+          docker compose -f compose.coolify.prod.yaml config --format json | python3 scripts/check-coolify-compose.py certguard-prod producao
+          COOLIFY_RESOURCE_UUID=certguard-prod-ci-identity docker compose -f compose.coolify.prod.yaml config --format json | python3 scripts/check-coolify-compose.py certguard-prod-ci-identity producao
       - name: Validar e subir ambiente descartável
         run: |
           docker compose -p certguard-ci -f deploy/compose.yaml -f deploy/compose.dev.yaml config --quiet

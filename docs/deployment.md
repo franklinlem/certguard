@@ -43,3 +43,10 @@ Seguir [roteiro de homologação](homologacao.md). Fixar SHA e schema esperado (
 ## Destino de backup informado
 
 Responsável escolheu franklin@frank-note2 (servidor físico Linux Mint XFCE com Docker, Hermes, outros backups e Uptime Kuma). Verificação adiada por solicitação dele. Não é backup configurado: diretório, transporte, criptografia, retenção e restauração permanecem pendentes. Não acessar ou modificar serviços desse host sem o próximo escopo definido.
+
+
+## Configuração exclusiva de produção (preparada, não implantada)
+
+Usar `/compose.coolify.prod.yaml` em recurso novo do ambiente `producao`, no modo Raw. O recurso recebe UUID exclusivo, segredo PostgreSQL exclusivo gerado no Coolify e volume próprio. O domínio e a origem são `https://certguard.franklem.uk`; routers, middleware e service Traefik usam prefixo `certguard-prod`, sem reutilizar os da homologação. Não clonar o banco, sessões, administrador ou segredos de homologação. Auto-deploy deve permanecer desligado, revisão fixada após CI e aceite.
+
+A validação `scripts/check-coolify-compose.py <projeto> producao` confere isolamento, flags desativadas, roteamento e origem de produção. A CI renderiza ambos os arquivos com nomes padrão e UUIDs simulados. A configuração nova não autoriza a implantação antes de concluir backup externo/restauração e aceite da homologação.
