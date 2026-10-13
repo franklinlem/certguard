@@ -1,6 +1,6 @@
-# Interface — etapa 05
+# Interface — etapa 06
 
-Interface administrativa em pt-BR: login, cadastro/edição, pausa/ativação, check manual, histórico paginado e arquivamento. O painel informa configuração do agendador e próxima execução prevista. Há visão agregada, detalhes e gráfico de até 20 checks por página. Há histórico de eventos de alerta; envio externo e listagem de endpoints arquivados ainda não existem; a UI informa esses limites. Histórico arquivado permanece consultável por id na API.
+Interface administrativa em pt-BR: login, cadastro/edição, pausa/ativação, check manual, histórico paginado e arquivamento. O painel informa configuração do agendador e próxima execução prevista. Há visão agregada, detalhes e gráfico de até 20 checks por página. Há histórico de eventos de alerta; envio externo opt-in está disponível; listagem de endpoints arquivados ainda não existe; a UI informa esses limites. Histórico arquivado permanece consultável por id na API.
 
 Tokens de sessão ficam em cookie HttpOnly; CSRF somente em memória. Erros acessíveis via role=alert, mensagens de conclusão via role=status, formulários com labels e estados por texto e cor. Fontes do sistema, tema conforme preferência, layout adaptável e sem mídia que cause deslocamento de layout.
 
@@ -15,4 +15,6 @@ Referências consultadas:
 
 O dashboard oferece atualização explícita, contadores globais independentes da paginação e status textual por endpoint. Datas indicam o resultado observado. Detalhes incluem protocolo, cifra, IP, validade e SANs. Gráfico SVG possui dimensões e tabela acessível; erros sem validade interrompem a linha. Carregamento, indisponibilidade e ausência de dados são estados distintos.
 
-Alertas e eventos oferecem filtro de problemas ativos/todos/resolvidos, atualização independente e observação preservada. Resoluções administrativas são diferenciadas de recuperação TLS; ausência de transporte externo é informada.
+Alertas e eventos oferecem filtro de problemas ativos/todos/resolvidos, atualização independente e observação preservada. Resoluções administrativas são diferenciadas de recuperação TLS; estado do executor de entregas é informado.
+
+Canais e entregas cadastra SMTP/webhook pausado, limpa segredos do formulário após sucesso, exige confirmação para ativar/pausar/arquivar e mostra histórico paginado. Falta de chave é comunicada sem expor detalhes sensíveis; consulte operação. Aceite remoto é distinguido de chegada à caixa final.

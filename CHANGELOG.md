@@ -1,5 +1,11 @@
 # Histórico
 
+## Etapa 06 — em revisão
+- Canais SMTP/webhook cifrados, pausados no cadastro e ativação explícita.
+- Outbox transacional, retries limitados, cancelamento e histórico de estado.
+- HTTPS/HMAC, SSRF, SMTP TLS obrigatório e testes locais isolados.
+- Executor desabilitado por padrão; sem mensagens reais ou deploy.
+
 ## Etapa 05 — em revisão
 - Regras de alerta, deduplicação por episódio e recuperação confirmada.
 - Eventos transacionais com snapshot preservado após retenção dos checks.

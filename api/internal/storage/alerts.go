@@ -72,9 +72,13 @@ func recordAlert(ctx context.Context, tx pgx.Tx, endpoint Endpoint, check Check)
 	if err != nil {
 		return err
 	}
-	_, err = tx.Exec(ctx, `INSERT INTO alert_events(endpoint_id,check_id,endpoint_name,hostname,port,event_type,severity,threshold_days,dedupe_key,snapshot,resolved_at,resolution)
- VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,CASE WHEN $7='info' THEN clock_timestamp() ELSE NULL END,CASE WHEN $7='info' THEN 'recovered' ELSE NULL END)`, endpoint.ID, check.ID, endpoint.Name, endpoint.Hostname, endpoint.Port, rule.Type, rule.Severity, rule.Threshold, alerts.Key(check.Result, *rule), raw)
-	return err
+	var eventID string
+	err = tx.QueryRow(ctx, `INSERT INTO alert_events(endpoint_id,check_id,endpoint_name,hostname,port,event_type,severity,threshold_days,dedupe_key,snapshot,resolved_at,resolution)
+ VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,CASE WHEN $7='info' THEN clock_timestamp() ELSE NULL END,CASE WHEN $7='info' THEN 'recovered' ELSE NULL END) RETURNING id::text`, endpoint.ID, check.ID, endpoint.Name, endpoint.Hostname, endpoint.Port, rule.Type, rule.Severity, rule.Threshold, alerts.Key(check.Result, *rule), raw).Scan(&eventID)
+	if err != nil {
+		return err
+	}
+	return enqueueAlert(ctx, tx, eventID, endpoint, check, *rule)
 }
 
 func (s *Store) Alerts(ctx context.Context, state, endpointID string, limit, offset int) (AlertPage, error) {

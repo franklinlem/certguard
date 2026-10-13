@@ -1,4 +1,4 @@
-# Segurança — etapa 05
+# Segurança — etapa 06
 
 SSRF e inspeção estão nos ADR-002/003. Somente porta 443 e IPs aprovados; DNS fixado no dial. Nenhum bypass por ambiente. Certificados e seus metadados são dados não confiáveis: JSON e renderização como texto, sem HTML recebido do alvo.
 
@@ -16,4 +16,6 @@ Antes de homologar: rever rotas/egress, recursos, backups/restore, proteção de
 
 O agendador inspeciona somente endpoints ativos cadastrados pelo administrador. Reutiliza integralmente o motor SSRF/TLS, sem bypass. Até 25 workers configuráveis por instância (padrão 10), além dos quatro checks manuais; locks no PostgreSQL impedem sobreposição por endpoint entre instâncias. Retenção é opt-in, limitada a 1000 registros por lote e janela mínima de 30 dias, mantendo o último resultado. Não há garantia de exatamente uma conexão externa se o processo cair antes do commit.
 
-Eventos são consultáveis apenas com sessão administrativa. Regras não iniciam conexões ou enviam mensagens; observações e destinos não confiáveis são renderizados como texto. Eventos persistem junto do check, sob lock, sem parâmetros SQL interpolados. Retenção dos checks apenas anula a referência e mantém o snapshot. Autorização para implantação e transporte externo continua independente desta entrega.
+Eventos são consultáveis apenas com sessão administrativa. Regras não iniciam conexões; o executor separado entrega somente em canais ativos autorizados; observações e destinos não confiáveis são renderizados como texto. Eventos persistem junto do check, sob lock, sem parâmetros SQL interpolados. Retenção dos checks apenas anula a referência e mantém o snapshot. Autorização para implantação e transporte externo continua independente desta entrega.
+
+Configurações de canais cifradas com AES-256-GCM e AAD. Chave fora do banco; validação na ativação/partida do executor. Cadastro não envia teste e começa pausado. SMTP exige TLS antes de autenticação; webhook valida TLS, DNS público integral, IP fixo, sem redirects/proxy e HMAC. Erros remotos sanitizados. API devolve apenas metadados. Veja ADR-008 e operação para backup, backlog e limites de idempotência.

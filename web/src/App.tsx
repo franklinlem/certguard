@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import type { FormEvent } from "react";
+import { Notifications } from "./Notifications";
 import { Alerts } from "./Alerts";
 import { api, APIError } from "./api";
 import type { Check, Endpoint, Session, Dashboard } from "./api";
@@ -579,6 +580,13 @@ export function App() {
             </section>
           )}
           <Alerts revision={alertRevision} onError={handleError} />
+          <Notifications
+            csrf={session.csrf_token}
+            configured={session.notifications?.configured ?? false}
+            enabled={session.notifications?.delivery_enabled ?? false}
+            revision={alertRevision}
+            onError={handleError}
+          />
           {selected && (
             <section className="panel" aria-labelledby="history-title">
               <div className="section-header">

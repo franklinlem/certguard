@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/franklinlem/certguard/api/internal/alerts"
 	"github.com/franklinlem/certguard/api/internal/certificate"
 	"github.com/franklinlem/certguard/api/internal/httpapi"
 	"github.com/franklinlem/certguard/api/internal/scheduler"
@@ -15,7 +16,9 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 )
@@ -104,17 +107,43 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	app, err := httpapi.NewApp(&storage.Store{Pool: pool}, os.Getenv("PUBLIC_APP_URL"), os.Getenv("APP_ENV") == "development")
+	var secret *alerts.Cipher
+	if key := os.Getenv("ALERT_ENCRYPTION_KEY"); key != "" {
+		secret, err = alerts.NewCipher(key)
+		if err != nil {
+			return fmt.Errorf("ALERT_ENCRYPTION_KEY inválida")
+		}
+	}
+	deliver := false
+	if flag := os.Getenv("DELIVERY_ENABLED"); flag != "" {
+		deliver, err = strconv.ParseBool(flag)
+		if err != nil {
+			return fmt.Errorf("DELIVERY_ENABLED inválido")
+		}
+	}
+	if deliver && secret == nil {
+		return fmt.Errorf("chave de canais obrigatória para habilitar entregas")
+	}
+	if deliver {
+		verify, cancel := context.WithTimeout(ctx, 5*time.Second)
+		err = (&storage.Store{Pool: pool, Cipher: secret}).VerifyChannels(verify)
+		cancel()
+		if err != nil {
+			return fmt.Errorf("canais ativos indisponíveis; confira chave e banco antes de iniciar entregas")
+		}
+	}
+	app, err := httpapi.NewApp(&storage.Store{Pool: pool, Cipher: secret}, os.Getenv("PUBLIC_APP_URL"), os.Getenv("APP_ENV") == "development")
 	if err != nil {
 		return err
 	}
 	app.Background = cfg
-	if cfg.Enabled || cfg.RetentionEnabled {
+	app.DeliveryEnabled = deliver
+	if cfg.Enabled || cfg.RetentionEnabled || deliver {
 		pc, err := pgxpool.ParseConfig(url)
 		if err != nil {
 			return fmt.Errorf("configuração PostgreSQL inválida")
 		}
-		pc.MaxConns = int32(cfg.Workers + 1)
+		pc.MaxConns = int32(cfg.Workers + 2)
 		backgroundPool, err := pgxpool.NewWithConfig(ctx, pc)
 		if err != nil {
 			return fmt.Errorf("pool de agendamento indisponível")
@@ -124,7 +153,13 @@ func run() error {
 		finished := make(chan struct{})
 		go func() {
 			defer close(finished)
-			_ = scheduler.Run(backgroundCtx, &storage.Store{Pool: backgroundPool}, cfg)
+			store := &storage.Store{Pool: backgroundPool, Cipher: secret}
+			var workers sync.WaitGroup
+			workers.Go(func() { _ = scheduler.Run(backgroundCtx, store, cfg) })
+			if deliver {
+				workers.Go(func() { alerts.Run(backgroundCtx, store, alerts.NewTransport().Send) })
+			}
+			workers.Wait()
 		}()
 		defer func() { cancel(); <-finished }()
 	}

@@ -3,7 +3,9 @@ package httpapi
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
+	"github.com/franklinlem/certguard/api/internal/alerts"
 	"github.com/franklinlem/certguard/api/internal/auth"
 	"github.com/franklinlem/certguard/api/internal/certificate"
 	"github.com/franklinlem/certguard/api/internal/scheduler"
@@ -38,7 +40,7 @@ func TestOriginAndUnauthorized(t *testing.T) {
 		t.Fatal(e)
 	}
 	h := a.Handler()
-	for _, path := range []string{"/api/v1/alerts", "/api/v1/dashboard", "/api/v1/auth/me", "/api/v1/endpoints", "/api/v1/endpoints/00000000-0000-0000-0000-000000000000/checks"} {
+	for _, path := range []string{"/api/v1/alert-channels", "/api/v1/alert-deliveries", "/api/v1/alerts", "/api/v1/dashboard", "/api/v1/auth/me", "/api/v1/endpoints", "/api/v1/endpoints/00000000-0000-0000-0000-000000000000/checks"} {
 		if w := request(h, "GET", path, "", nil, "", ""); w.Code != 401 {
 			t.Fatal(w.Code)
 		}
@@ -111,6 +113,29 @@ func TestPostgresHTTPFlow(t *testing.T) {
 		t.Fatal("configuração operacional ausente")
 	}
 	cookie := login.Result().Cookies()[0]
+	channelBody := `{"name":"Seguro","type":"webhook","config":{"url":"https://notify.example.com/hook","secret":"ssssssssssssssssssssssssssssssss"}}`
+	if w := request(h, "POST", "/api/v1/alert-channels", channelBody, cookie, session.CSRF, origin); w.Code != 503 {
+		t.Fatal(w.Code, w.Body.String())
+	}
+	s.Cipher, _ = alerts.NewCipher(base64.StdEncoding.EncodeToString(bytes.Repeat([]byte{8}, 32)))
+	channelResponse := request(h, "POST", "/api/v1/alert-channels", channelBody, cookie, session.CSRF, origin)
+	var channel storage.Channel
+	if channelResponse.Code != 201 || json.Unmarshal(channelResponse.Body.Bytes(), &channel) != nil || channel.Enabled || strings.Contains(channelResponse.Body.String(), "secret") || strings.Contains(channelResponse.Body.String(), "https:") {
+		t.Fatal(channelResponse.Code, channelResponse.Body.String())
+	}
+	if w := request(h, "PATCH", "/api/v1/alert-channels/"+channel.ID, `{"enabled":true}`, cookie, "", origin); w.Code != 403 {
+		t.Fatal(w.Code)
+	}
+	if w := request(h, "PATCH", "/api/v1/alert-channels/"+channel.ID, `{"config":{}}`, cookie, session.CSRF, origin); w.Code != 400 {
+		t.Fatal(w.Code)
+	}
+	if w := request(h, "PATCH", "/api/v1/alert-channels/"+channel.ID, `{"enabled":true}`, cookie, session.CSRF, origin); w.Code != 200 {
+		t.Fatal(w.Code, w.Body.String())
+	}
+	if w := request(h, "GET", "/api/v1/alert-deliveries?event_id=invalid", "", cookie, "", ""); w.Code != 400 {
+		t.Fatal(w.Code)
+	}
+
 	for _, q := range []string{"?state=invalid", "?endpoint_id=bad", "?limit=101"} {
 		if w := request(h, "GET", "/api/v1/alerts"+q, "", cookie, "", ""); w.Code != 400 {
 			t.Fatal(w.Code)
