@@ -83,6 +83,10 @@ jobs:
       METRICS_TOKEN: ""
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Validar scripts de backup sem acessar servidores reais
+        run: |
+          bash -n scripts/backup/backup.sh scripts/backup/restore-test.sh scripts/backup/daily.sh
+          python3 scripts/backup/test_backup.py
       - name: Validar Compose dos dois ambientes sem acessar infraestrutura
         run: |
           docker compose -f compose.coolify.yaml config --format json | python3 scripts/check-coolify-compose.py
