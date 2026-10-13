@@ -112,4 +112,4 @@ PRs 1–11 integrados na main. Consulte [evidências da integração](docs/integ
 
 ## Homologação inicial (13/10/2026)
 
-Disponível em https://certguard-dev.franklem.uk com HTTPS válido. [Validação inicial e pendências](docs/validation-etapa-08.md): API/schema prontos, acesso sem sessão recusado e métricas não expostas. [Criar administrador por entrada segura](docs/bootstrap-homologacao.md). Inspeção interna final e backup no frank-note2 ainda pendentes; produção não implantada. [Configuração e isolamento no Coolify](docs/adr/010-coolify-isolation.md).
+Disponível em https://certguard-dev.franklem.uk com HTTPS válido. [Validação inicial e pendências](docs/validation-etapa-08.md): API/schema prontos, acesso sem sessão recusado e métricas não expostas. [Criar administrador por entrada segura](docs/bootstrap-homologacao.md). PR 15 implantado; navegação, check autenticado e isolamento interno verificados. [Preparação de produção e pendências](docs/validation-preparacao-producao.md): backup no frank-note2 e aceite completo ainda pendentes; produção não implantada. [Configuração e isolamento no Coolify](docs/adr/010-coolify-isolation.md).

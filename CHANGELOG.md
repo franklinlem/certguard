@@ -1,5 +1,11 @@
 # Histórico
 
+## Preparação de produção — 13/10/2026
+
+- PR 15 integrado e implantado em homologação; correções e check autenticado validados.
+- Isolamento efetivo, limites, saúde e preservação dos demais containers conferidos.
+- Compose exclusivo de produção e matriz CI dos dois ambientes preparados. Backup externo depende do acesso ao frank-note2; produção não implantada.
+
 ## Navegação para os painéis — 13/10/2026
 
 - Adicionar/editar endpoint posiciona o formulário e foca o campo Nome.
