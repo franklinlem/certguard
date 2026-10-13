@@ -3,6 +3,11 @@ import json
 import sys
 
 config = json.load(sys.stdin)
+expected_project = sys.argv[1] if len(sys.argv) > 1 else 'certguard-dev'
+assert config['name'] == expected_project, 'identidade Compose divergente'
+assert config['networks']['database']['name'] == expected_project + '_database'
+assert config['networks']['app']['name'] == expected_project + '_app'
+assert config['volumes']['postgres_data']['name'] == expected_project + '_postgres_data'
 services = config['services']
 assert set(services) == {'db', 'migrate', 'api', 'web'}
 expected_networks = {
