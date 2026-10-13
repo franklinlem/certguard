@@ -6,12 +6,15 @@ import (
 	"fmt"
 	"github.com/franklinlem/certguard/api/internal/certificate"
 	"github.com/franklinlem/certguard/api/internal/httpapi"
+	"github.com/franklinlem/certguard/api/internal/storage"
 	"github.com/franklinlem/certguard/api/migrations"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"io"
 	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 )
@@ -57,7 +60,7 @@ func run() error {
 		}
 		return nil
 	}
-	if mode != "serve" && mode != "migrate" {
+	if mode != "serve" && mode != "migrate" && mode != "admin-create" {
 		return fmt.Errorf("comando desconhecido")
 	}
 	url := os.Getenv("DATABASE_URL")
@@ -78,7 +81,29 @@ func run() error {
 		slog.Info("migrações aplicadas")
 		return nil
 	}
-	server := &http.Server{Addr: ":8080", Handler: httpapi.Handler(pool), ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 10 * time.Second, WriteTimeout: 10 * time.Second, IdleTimeout: 30 * time.Second, MaxHeaderBytes: 16384}
+	if mode == "admin-create" {
+		if len(args) != 2 {
+			return fmt.Errorf("uso: certguard admin-create email (senha via stdin)")
+		}
+		password, err := io.ReadAll(io.LimitReader(os.Stdin, 74))
+		if err != nil {
+			return fmt.Errorf("não foi possível ler a senha")
+		}
+		secret := strings.TrimSuffix(strings.TrimSuffix(string(password), "\n"), "\r")
+		if len(password) > 73 {
+			return fmt.Errorf("senha excede limite")
+		}
+		if err = (&storage.Store{Pool: pool}).Bootstrap(ctx, args[1], secret); err != nil {
+			return fmt.Errorf("bootstrap não concluído; confira senha, e-mail, banco e existência de administrador")
+		}
+		slog.Info("administrador inicial criado")
+		return nil
+	}
+	app, err := httpapi.NewApp(&storage.Store{Pool: pool}, os.Getenv("PUBLIC_APP_URL"), os.Getenv("APP_ENV") == "development")
+	if err != nil {
+		return err
+	}
+	server := &http.Server{Addr: ":8080", Handler: app.Handler(), ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 10 * time.Second, WriteTimeout: 20 * time.Second, IdleTimeout: 30 * time.Second, MaxHeaderBytes: 16384}
 	done := make(chan error, 1)
 	go func() { done <- server.ListenAndServe() }()
 	slog.Info("API iniciada", "porta", 8080)

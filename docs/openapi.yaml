@@ -1,20 +1,930 @@
 openapi: 3.0.3
 info:
-  title: CertGuard — API de fundação
-  version: 0.0.1
-  description: Saúde do processo e disponibilidade do banco. API de negócio ainda não implementada.
+  title: CertGuard — API administrativa
+  version: 0.0.2
+  description: Sessões, endpoints e checks manuais. Sem scheduler ativo.
+components:
+  securitySchemes:
+    session:
+      type: apiKey
+      in: cookie
+      name: __Host-certguard_session
+      description: Em HTTP local, o cookie chama-se certguard_session.
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+      - error
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+      required:
+      - id
+      - email
+    Session:
+      type: object
+      properties:
+        user:
+          $ref: '#/components/schemas/User'
+        csrf_token:
+          type: string
+      required:
+      - user
+      - csrf_token
+    EndpointInput:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        hostname:
+          type: string
+          maxLength: 253
+        port:
+          type: integer
+          enum:
+          - 443
+          default: 443
+        enabled:
+          type: boolean
+          default: true
+        interval_minutes:
+          type: integer
+          minimum: 5
+          maximum: 10080
+          default: 360
+        warning_days:
+          type: integer
+          minimum: 1
+          maximum: 36500
+          default: 30
+        critical_days:
+          type: integer
+          minimum: 0
+          maximum: 36499
+          default: 7
+      required:
+      - name
+      - hostname
+    EndpointPatch:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        hostname:
+          type: string
+          maxLength: 253
+        port:
+          type: integer
+          enum:
+          - 443
+          default: 443
+        enabled:
+          type: boolean
+          default: true
+        interval_minutes:
+          type: integer
+          minimum: 5
+          maximum: 10080
+          default: 360
+        warning_days:
+          type: integer
+          minimum: 1
+          maximum: 36500
+          default: 30
+        critical_days:
+          type: integer
+          minimum: 0
+          maximum: 36499
+          default: 7
+      minProperties: 1
+      additionalProperties: false
+    Endpoint:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        hostname:
+          type: string
+          maxLength: 253
+        port:
+          type: integer
+          enum:
+          - 443
+          default: 443
+        enabled:
+          type: boolean
+          default: true
+        interval_minutes:
+          type: integer
+          minimum: 5
+          maximum: 10080
+          default: 360
+        warning_days:
+          type: integer
+          minimum: 1
+          maximum: 36500
+          default: 30
+        critical_days:
+          type: integer
+          minimum: 0
+          maximum: 36499
+          default: 7
+        last_check_at:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+      - id
+      - name
+      - hostname
+      - port
+      - enabled
+      - interval_minutes
+      - warning_days
+      - critical_days
+    Certificate:
+      type: object
+      properties:
+        subject:
+          type: string
+        issuer:
+          type: string
+        serial_number:
+          type: string
+        dns_names:
+          type: array
+          items:
+            type: string
+        ip_addresses:
+          type: array
+          items:
+            type: string
+        email_addresses:
+          type: array
+          items:
+            type: string
+        uris:
+          type: array
+          items:
+            type: string
+        not_before:
+          type: string
+          format: date-time
+        not_after:
+          type: string
+          format: date-time
+        fingerprint_sha256:
+          type: string
+    Result:
+      type: object
+      properties:
+        hostname:
+          type: string
+        port:
+          type: integer
+        checked_at:
+          type: string
+          format: date-time
+        duration_ms:
+          type: integer
+        status:
+          type: string
+          enum:
+          - healthy
+          - warning
+          - critical
+          - error
+        code:
+          type: string
+        resolved_ip:
+          type: string
+        tls_version:
+          type: string
+        cipher_suite:
+          type: string
+        certificate:
+          $ref: '#/components/schemas/Certificate'
+        chain:
+          type: array
+          items:
+            $ref: '#/components/schemas/Certificate'
+        days_remaining:
+          type: integer
+        hostname_valid:
+          type: boolean
+        chain_valid:
+          type: boolean
+      required:
+      - hostname
+      - port
+      - checked_at
+      - status
+      - code
+    Check:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        endpoint_id:
+          type: string
+          format: uuid
+        result:
+          $ref: '#/components/schemas/Result'
+      required:
+      - id
+      - endpoint_id
+      - result
+    EndpointPage:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Endpoint'
+        limit:
+          type: integer
+        offset:
+          type: integer
+      required:
+      - items
+      - limit
+      - offset
+    CheckPage:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Check'
+        limit:
+          type: integer
+        offset:
+          type: integer
+      required:
+      - items
+      - limit
+      - offset
+    Login:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+          maxLength: 72
+      required:
+      - email
+      - password
+  parameters:
+    Origin:
+      name: Origin
+      in: header
+      required: true
+      schema:
+        type: string
+      description: Origem exata PUBLIC_APP_URL; enviada automaticamente pelo navegador.
+    CSRF:
+      name: X-CSRF-Token
+      in: header
+      required: true
+      schema:
+        type: string
+    ID:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    limit:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 50
+    offset:
+      name: offset
+      in: query
+      schema:
+        type: integer
+        minimum: 0
+        maximum: 100000
+        default: 0
 paths:
+  /api/v1/auth/login:
+    post:
+      summary: Entrar; cria cookie HttpOnly/SameSite Strict, Secure fora do desenvolvimento
+      security: []
+      responses:
+        '200':
+          description: Operação concluída
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+        '400':
+          description: Entrada inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Credenciais ou sessão inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Origem ou CSRF inválido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Registro não encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Conflito, pausa, lock ou cooldown
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Limite excedido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Indisponibilidade temporária
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      parameters:
+      - $ref: '#/components/parameters/Origin'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Login'
+  /api/v1/auth/me:
+    get:
+      summary: Consultar sessão
+      security:
+      - session: []
+      responses:
+        '200':
+          description: Operação concluída
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+        '400':
+          description: Entrada inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Credenciais ou sessão inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Origem ou CSRF inválido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Registro não encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Conflito, pausa, lock ou cooldown
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Limite excedido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Indisponibilidade temporária
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      parameters: []
+  /api/v1/auth/logout:
+    post:
+      summary: Revogar sessão atual
+      security:
+      - session: []
+      responses:
+        '204':
+          description: Operação concluída
+        '400':
+          description: Entrada inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Credenciais ou sessão inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Origem ou CSRF inválido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Registro não encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Conflito, pausa, lock ou cooldown
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Limite excedido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Indisponibilidade temporária
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      parameters:
+      - $ref: '#/components/parameters/Origin'
+      - $ref: '#/components/parameters/CSRF'
+  /api/v1/endpoints:
+    get:
+      summary: Listar endpoints ativos
+      security:
+      - session: []
+      responses:
+        '200':
+          description: Operação concluída
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EndpointPage'
+        '400':
+          description: Entrada inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Credenciais ou sessão inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Origem ou CSRF inválido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Registro não encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Conflito, pausa, lock ou cooldown
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Limite excedido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Indisponibilidade temporária
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      parameters:
+      - $ref: '#/components/parameters/limit'
+      - $ref: '#/components/parameters/offset'
+    post:
+      summary: Cadastrar endpoint; validação DNS ocorre no check
+      security:
+      - session: []
+      responses:
+        '201':
+          description: Operação concluída
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Endpoint'
+        '400':
+          description: Entrada inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Credenciais ou sessão inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Origem ou CSRF inválido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Registro não encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Conflito, pausa, lock ou cooldown
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Limite excedido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Indisponibilidade temporária
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      parameters:
+      - $ref: '#/components/parameters/Origin'
+      - $ref: '#/components/parameters/CSRF'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EndpointInput'
+  /api/v1/endpoints/{id}:
+    get:
+      summary: Consultar endpoint
+      security:
+      - session: []
+      responses:
+        '200':
+          description: Operação concluída
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Endpoint'
+        '400':
+          description: Entrada inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Credenciais ou sessão inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Origem ou CSRF inválido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Registro não encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Conflito, pausa, lock ou cooldown
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Limite excedido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Indisponibilidade temporária
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      parameters:
+      - $ref: '#/components/parameters/ID'
+    patch:
+      summary: Atualizar campos enviados
+      security:
+      - session: []
+      responses:
+        '200':
+          description: Operação concluída
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Endpoint'
+        '400':
+          description: Entrada inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Credenciais ou sessão inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Origem ou CSRF inválido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Registro não encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Conflito, pausa, lock ou cooldown
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Limite excedido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Indisponibilidade temporária
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      parameters:
+      - $ref: '#/components/parameters/ID'
+      - $ref: '#/components/parameters/Origin'
+      - $ref: '#/components/parameters/CSRF'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EndpointPatch'
+    delete:
+      summary: Arquivar, preservando histórico
+      security:
+      - session: []
+      responses:
+        '204':
+          description: Operação concluída
+        '400':
+          description: Entrada inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Credenciais ou sessão inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Origem ou CSRF inválido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Registro não encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Conflito, pausa, lock ou cooldown
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Limite excedido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Indisponibilidade temporária
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      parameters:
+      - $ref: '#/components/parameters/ID'
+      - $ref: '#/components/parameters/Origin'
+      - $ref: '#/components/parameters/CSRF'
+  /api/v1/endpoints/{id}/check:
+    post:
+      summary: Verificar e persistir; certificado inválido também retorna 201
+      security:
+      - session: []
+      responses:
+        '201':
+          description: Operação concluída
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Check'
+        '400':
+          description: Entrada inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Credenciais ou sessão inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Origem ou CSRF inválido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Registro não encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Conflito, pausa, lock ou cooldown
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Limite excedido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Indisponibilidade temporária
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      parameters:
+      - $ref: '#/components/parameters/ID'
+      - $ref: '#/components/parameters/Origin'
+      - $ref: '#/components/parameters/CSRF'
+  /api/v1/endpoints/{id}/checks:
+    get:
+      summary: Histórico, inclusive de arquivados
+      security:
+      - session: []
+      responses:
+        '200':
+          description: Operação concluída
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CheckPage'
+        '400':
+          description: Entrada inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Credenciais ou sessão inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Origem ou CSRF inválido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Registro não encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Conflito, pausa, lock ou cooldown
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Limite excedido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Indisponibilidade temporária
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      parameters:
+      - $ref: '#/components/parameters/ID'
+      - $ref: '#/components/parameters/limit'
+      - $ref: '#/components/parameters/offset'
   /health:
     get:
-      summary: Verificar processo
+      summary: Disponibilidade do processo
+      security: []
       responses:
         '200':
-          description: Processo disponível
+          description: Disponível
+        '503':
+          description: Indisponível
   /ready:
     get:
-      summary: Verificar conectividade PostgreSQL
+      summary: Disponibilidade PostgreSQL
+      security: []
       responses:
         '200':
-          description: Banco disponível
+          description: Disponível
         '503':
-          description: Banco indisponível
+          description: Indisponível

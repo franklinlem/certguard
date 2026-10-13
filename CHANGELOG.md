@@ -1,6 +1,12 @@
 # Histórico
 
-## Não lançado — 12/10/2026
+## Etapa 02 — em revisão
+- Administrador inicial por CLI, login/logout, sessão persistida e CSRF.
+- Cadastro, edição, pausa e arquivamento de endpoints.
+- Check manual com lock/cooldown e histórico transacional.
+- Interface real e testes de integração/E2E; sem deploy.
+
+## Fundação — 12/10/2026
 - Fundação do monorepositório e motor TLS com proteção SSRF.
 - Testes de certificados, DNS/rebinding, timeout, migração e saúde.
 - Base web, Docker Compose, CI e decisões técnicas.
