@@ -1,8 +1,9 @@
 openapi: 3.0.3
 info:
   title: CertGuard — API administrativa
-  version: 0.0.2
-  description: Sessões, endpoints e checks manuais. Sem scheduler ativo.
+  version: 0.0.4
+  description: 'API administrativa: sessões, endpoints, checks persistidos, configuração
+    de agendamento e dashboard.'
 components:
   securitySchemes:
     session:
@@ -369,8 +370,50 @@ components:
       - type: object
         properties:
           latest:
-            allOf:
-            - $ref: '#/components/schemas/Result'
+            type: object
+            properties:
+              hostname:
+                type: string
+              port:
+                type: integer
+              checked_at:
+                type: string
+                format: date-time
+              duration_ms:
+                type: integer
+              status:
+                type: string
+                enum:
+                - healthy
+                - warning
+                - critical
+                - error
+              code:
+                type: string
+              resolved_ip:
+                type: string
+              tls_version:
+                type: string
+              cipher_suite:
+                type: string
+              certificate:
+                $ref: '#/components/schemas/Certificate'
+              chain:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Certificate'
+              days_remaining:
+                type: integer
+              hostname_valid:
+                type: boolean
+              chain_valid:
+                type: boolean
+            required:
+            - hostname
+            - port
+            - checked_at
+            - status
+            - code
             nullable: true
         required:
         - latest
