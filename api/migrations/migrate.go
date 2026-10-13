@@ -14,6 +14,9 @@ var initial string
 //go:embed 002_auth.sql
 var auth string
 
+//go:embed 003_scheduler.sql
+var scheduler string
+
 func Up(ctx context.Context, pool *pgxpool.Pool) error {
 	tx, e := pool.Begin(ctx)
 	if e != nil {
@@ -26,7 +29,7 @@ func Up(ctx context.Context, pool *pgxpool.Pool) error {
 	if _, e = tx.Exec(ctx, "CREATE TABLE IF NOT EXISTS schema_migrations(version INTEGER PRIMARY KEY, applied_at TIMESTAMPTZ NOT NULL DEFAULT now())"); e != nil {
 		return e
 	}
-	for i, script := range []string{initial, auth} {
+	for i, script := range []string{initial, auth, scheduler} {
 		var exists bool
 		if e = tx.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM schema_migrations WHERE version=$1)", i+1).Scan(&exists); e != nil {
 			return e

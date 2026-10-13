@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"github.com/franklinlem/certguard/api/internal/auth"
 	"github.com/franklinlem/certguard/api/internal/certificate"
+	"github.com/franklinlem/certguard/api/internal/scheduler"
 	"github.com/franklinlem/certguard/api/internal/storage"
 	"github.com/franklinlem/certguard/api/internal/testutil"
 	"net/http"
@@ -89,6 +90,7 @@ func TestPostgresHTTPFlow(t *testing.T) {
 	if e != nil {
 		t.Fatal(e)
 	}
+	a.Background = scheduler.Config{Enabled: true, Workers: 5, RetentionDays: 180}
 	a.inspect = func(_ context.Context, e storage.Endpoint) certificate.Result {
 		return certificate.Result{Hostname: e.Hostname, Port: e.Port, Status: "error", Code: "blocked_target", CheckedAt: time.Now().UTC()}
 	}
@@ -99,10 +101,14 @@ func TestPostgresHTTPFlow(t *testing.T) {
 		t.Fatal(login.Code, login.Body.String())
 	}
 	var session struct {
-		CSRF string `json:"csrf_token"`
+		CSRF       string           `json:"csrf_token"`
+		Background scheduler.Config `json:"background"`
 	}
 	if e = json.Unmarshal(login.Body.Bytes(), &session); e != nil {
 		t.Fatal(e)
+	}
+	if !session.Background.Enabled || session.Background.Workers != 5 {
+		t.Fatal("configuração operacional ausente")
 	}
 	cookie := login.Result().Cookies()[0]
 	if w := request(h, "POST", "/api/v1/endpoints", `{"name":"Teste","hostname":"example.com"}`, cookie, "", origin); w.Code != 403 {
@@ -125,7 +131,7 @@ func TestPostgresHTTPFlow(t *testing.T) {
 	if e = json.Unmarshal(created.Body.Bytes(), &ep); e != nil {
 		t.Fatal(e)
 	}
-	if ep.Hostname != "example.com" {
+	if ep.Hostname != "example.com" || ep.NextCheck == nil {
 		t.Fatal(ep)
 	}
 	path := "/api/v1/endpoints/" + ep.ID

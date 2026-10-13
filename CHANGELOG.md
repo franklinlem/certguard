@@ -1,5 +1,11 @@
 # Histórico
 
+## Etapa 03 — em revisão
+- Agendamento opt-in com workers limitados, jitter e locks compartilhados com checks manuais.
+- Próxima execução persistida e exibida no painel.
+- Retenção opt-in em lotes, preservando o último resultado por endpoint.
+- Testes de concorrência, cancelamento, reprogramação e limpeza; sem deploy.
+
 ## Etapa 02 — em revisão
 - Administrador inicial por CLI, login/logout, sessão persistida e CSRF.
 - Cadastro, edição, pausa e arquivamento de endpoints.

@@ -94,6 +94,48 @@ test("carrega endpoints reais e envia check autenticado com CSRF", async () => {
     ),
   );
   expect(
-    screen.getByText(/agendamento e os alertas ainda não estão ativos/),
+    screen.getByText(/Agendamento desabilitado neste ambiente/),
   ).toBeTruthy();
+});
+
+test("mostra agenda habilitada, próxima execução e retenção", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi
+      .fn()
+      .mockImplementation((path: string) =>
+        Promise.resolve(
+          response(
+            path.endsWith("/auth/me")
+              ? {
+                  user: { id: "u", email: "admin@example.com" },
+                  csrf_token: "t",
+                  background: {
+                    scheduler_enabled: true,
+                    retention_enabled: true,
+                    retention_days: 180,
+                  },
+                }
+              : {
+                  items: [
+                    {
+                      id: "e",
+                      name: "Site",
+                      hostname: "example.com",
+                      enabled: true,
+                      last_check_at: null,
+                      next_check_at: "2026-10-13T12:00:00Z",
+                    },
+                  ],
+                },
+          ),
+        ),
+      ),
+  );
+  render(<App />);
+  expect(await screen.findByText(/Agendamento habilitado/)).toBeTruthy();
+  expect(
+    await screen.findByText(/Próxima execução prevista:.*2026/),
+  ).toBeTruthy();
+  expect(screen.getByText(/Resultados com mais de 180 dias/)).toBeTruthy();
 });

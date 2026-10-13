@@ -1,6 +1,12 @@
 export type Session = {
   user: { id: string; email: string };
   csrf_token: string;
+  background: {
+    scheduler_enabled: boolean;
+    check_workers: number;
+    retention_enabled: boolean;
+    retention_days: number;
+  };
 };
 export type Endpoint = {
   id: string;
@@ -12,6 +18,7 @@ export type Endpoint = {
   warning_days: number;
   critical_days: number;
   last_check_at: string | null;
+  next_check_at: string | null;
 };
 export type Check = {
   id: string;

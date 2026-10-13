@@ -7,6 +7,7 @@ import (
 	"errors"
 	"github.com/franklinlem/certguard/api/internal/auth"
 	"github.com/franklinlem/certguard/api/internal/certificate"
+	"github.com/franklinlem/certguard/api/internal/scheduler"
 	"github.com/franklinlem/certguard/api/internal/storage"
 	"github.com/jackc/pgx/v5"
 	"io"
@@ -27,14 +28,16 @@ func (a *App) cookieName() string {
 }
 
 type App struct {
-	store   *storage.Store
-	origin  string
-	secure  bool
-	limiter *auth.Limiter
-	logins  chan struct{}
-	checks  chan struct{}
-	dummy   string
-	inspect storage.Inspect
+	// Background é imutável após iniciar o servidor.
+	Background scheduler.Config
+	store      *storage.Store
+	origin     string
+	secure     bool
+	limiter    *auth.Limiter
+	logins     chan struct{}
+	checks     chan struct{}
+	dummy      string
+	inspect    storage.Inspect
 }
 
 func NewApp(store *storage.Store, origin string, local bool) (*App, error) {
@@ -137,7 +140,7 @@ func (a *App) Handler() http.Handler {
 	mux.HandleFunc("GET /api/v1/auth/me", func(w http.ResponseWriter, r *http.Request) {
 		u, t, ok := a.session(w, r)
 		if ok {
-			send(w, 200, map[string]any{"user": u, "csrf_token": auth.CSRF(t)})
+			send(w, 200, map[string]any{"user": u, "csrf_token": auth.CSRF(t), "background": a.Background})
 		}
 	})
 	mux.HandleFunc("POST /api/v1/auth/logout", a.protected(func(w http.ResponseWriter, r *http.Request) {
@@ -222,7 +225,7 @@ func (a *App) login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	a.setCookie(w, token, int(auth.SessionAge.Seconds()))
-	send(w, 200, map[string]any{"user": u, "csrf_token": auth.CSRF(token)})
+	send(w, 200, map[string]any{"user": u, "csrf_token": auth.CSRF(token), "background": a.Background})
 }
 
 var uuidPattern = regexp.MustCompile(`^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`)

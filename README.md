@@ -2,7 +2,7 @@
 
 Monitor self-hosted de certificados TLS, com validação de destinos e proteção SSRF.
 
-**Estado: autenticação, endpoints e verificações manuais persistidas. Ainda não é o MVP completo nem uma versão pronta para produção.**
+**Estado: autenticação, endpoints, verificações manuais e agendamento automático opt-in. Ainda não é o MVP completo nem uma versão pronta para produção.**
 
 ## Entregue nesta etapa
 - Go: inspeção TLS via CLI, validação de cadeia/hostname, SANs, fingerprint, validade e classificação.
@@ -10,10 +10,12 @@ Monitor self-hosted de certificados TLS, com validação de destinos e proteçã
 - API `/health` e `/ready`, PostgreSQL e migração transacional inicial.
 - Login, cadastro/edição/pausa/arquivamento de endpoints e histórico na interface React.
 - Sessões persistidas, CSRF, rate limiting e verificação manual autenticada com cooldown.
+- Agendador com workers limitados, jitter, bloqueio por endpoint e próxima execução persistida.
+- Retenção opt-in em lotes, preservando o último resultado de cada endpoint.
 - Docker Compose e GitHub Actions com integração PostgreSQL e E2E.
 - Planejamento, decisões técnicas, modelo de ameaças e roteiro de homologação.
 
-Scheduler, alertas, recuperação de senha e dashboard agregado pertencem aos próximos incrementos. As verificações manuais estão restritas ao administrador autenticado.
+Alertas, recuperação de senha e dashboard agregado pertencem aos próximos incrementos. As verificações manuais estão restritas ao administrador autenticado.
 
 ## Desenvolvimento
 Requisitos: Go 1.27.2, Node.js 22.23.2+ e Docker com Compose v2.
@@ -68,3 +70,11 @@ Projetos Coolify, redes, credenciais e volumes distintos. Sem deploy automático
 
 ## Licença
 Apache-2.0. Copyright 2026 Franklin Martins.
+
+## Agendamento e retenção (etapa 03)
+
+Consulte [a operação do agendador](docs/scheduler.md) antes de habilitar `SCHEDULER_ENABLED=true`. O padrão permanece desabilitado. Somente endpoints ativos cadastrados pelo administrador são elegíveis; cada inspeção mantém a proteção SSRF. A próxima execução é uma previsão, sujeita a capacidade e disponibilidade.
+
+A limpeza de histórico é independente e desabilitada por padrão. `RETENTION_ENABLED=true` remove definitivamente resultados antigos, mantendo o último de cada endpoint. Revise a janela e o backup antes de habilitar em ambiente real. Esta entrega não altera a VPS.
+
+Planejamento: [etapa 03](docs/plano-etapa-03.md). Decisão: [ADR-005](docs/adr/005-scheduler-retention.md). Evidências: [validação](docs/validation-etapa-03.md).
