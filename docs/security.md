@@ -1,4 +1,4 @@
-# Segurança — etapa 03
+# Segurança — etapa 05
 
 SSRF e inspeção estão nos ADR-002/003. Somente porta 443 e IPs aprovados; DNS fixado no dial. Nenhum bypass por ambiente. Certificados e seus metadados são dados não confiáveis: JSON e renderização como texto, sem HTML recebido do alvo.
 
@@ -15,3 +15,5 @@ Para Compose use senha PostgreSQL alfanumérica: caracteres reservados exigem co
 Antes de homologar: rever rotas/egress, recursos, backups/restore, proteção de main e secrets. Nenhuma alteração na VPS sem avaliar impacto; alterações com risco de interrupção/perda de dados exigem autorização. CodeQL privado depende do plano GitHub e não foi habilitado automaticamente.
 
 O agendador inspeciona somente endpoints ativos cadastrados pelo administrador. Reutiliza integralmente o motor SSRF/TLS, sem bypass. Até 25 workers configuráveis por instância (padrão 10), além dos quatro checks manuais; locks no PostgreSQL impedem sobreposição por endpoint entre instâncias. Retenção é opt-in, limitada a 1000 registros por lote e janela mínima de 30 dias, mantendo o último resultado. Não há garantia de exatamente uma conexão externa se o processo cair antes do commit.
+
+Eventos são consultáveis apenas com sessão administrativa. Regras não iniciam conexões ou enviam mensagens; observações e destinos não confiáveis são renderizados como texto. Eventos persistem junto do check, sob lock, sem parâmetros SQL interpolados. Retenção dos checks apenas anula a referência e mantém o snapshot. Autorização para implantação e transporte externo continua independente desta entrega.

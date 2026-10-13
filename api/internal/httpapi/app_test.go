@@ -38,7 +38,7 @@ func TestOriginAndUnauthorized(t *testing.T) {
 		t.Fatal(e)
 	}
 	h := a.Handler()
-	for _, path := range []string{"/api/v1/dashboard", "/api/v1/auth/me", "/api/v1/endpoints", "/api/v1/endpoints/00000000-0000-0000-0000-000000000000/checks"} {
+	for _, path := range []string{"/api/v1/alerts", "/api/v1/dashboard", "/api/v1/auth/me", "/api/v1/endpoints", "/api/v1/endpoints/00000000-0000-0000-0000-000000000000/checks"} {
 		if w := request(h, "GET", path, "", nil, "", ""); w.Code != 401 {
 			t.Fatal(w.Code)
 		}
@@ -111,6 +111,15 @@ func TestPostgresHTTPFlow(t *testing.T) {
 		t.Fatal("configuração operacional ausente")
 	}
 	cookie := login.Result().Cookies()[0]
+	for _, q := range []string{"?state=invalid", "?endpoint_id=bad", "?limit=101"} {
+		if w := request(h, "GET", "/api/v1/alerts"+q, "", cookie, "", ""); w.Code != 400 {
+			t.Fatal(w.Code)
+		}
+	}
+	if w := request(h, "GET", "/api/v1/alerts", "", cookie, "", ""); w.Code != 200 || !strings.Contains(w.Body.String(), `"active":0`) {
+		t.Fatal(w.Code, w.Body.String())
+	}
+
 	if w := request(h, "GET", "/api/v1/dashboard?limit=101", "", cookie, "", ""); w.Code != 400 {
 		t.Fatal(w.Code)
 	}

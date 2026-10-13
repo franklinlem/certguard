@@ -1,5 +1,11 @@
 # Histórico
 
+## Etapa 05 — em revisão
+- Regras de alerta, deduplicação por episódio e recuperação confirmada.
+- Eventos transacionais com snapshot preservado após retenção dos checks.
+- Filtros, indicadores e histórico no painel autenticado.
+- Sem SMTP/webhook, notificações externas ou deploy.
+
 ## Etapa 04 — em revisão
 - Dashboard autenticado com contadores globais e último resultado por destino.
 - Detalhes de certificado/TLS e gráfico temporal com tabela acessível.

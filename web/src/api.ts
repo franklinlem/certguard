@@ -101,3 +101,26 @@ export type Dashboard = {
   limit: number;
   offset: number;
 };
+
+export type AlertEvent = {
+  id: string;
+  endpoint_id: string;
+  check_id: string | null;
+  endpoint_name: string;
+  hostname: string;
+  port: number;
+  event_type: string;
+  severity: string;
+  threshold_days: number;
+  snapshot: Check["result"];
+  created_at: string;
+  resolved_at: string | null;
+  resolution: string | null;
+};
+export type AlertPage = {
+  items: AlertEvent[];
+  summary: { active: number; critical: number; resolved: number; info: number };
+  limit: number;
+  offset: number;
+  generated_at: string;
+};
