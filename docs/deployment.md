@@ -50,3 +50,8 @@ Responsável escolheu franklin@frank-note2 (servidor físico Linux Mint XFCE com
 Usar `/compose.coolify.prod.yaml` em recurso novo do ambiente `producao`, no modo Raw. O recurso recebe UUID exclusivo, segredo PostgreSQL exclusivo gerado no Coolify e volume próprio. O domínio e a origem são `https://certguard.franklem.uk`; routers, middleware e service Traefik usam prefixo `certguard-prod`, sem reutilizar os da homologação. Não clonar o banco, sessões, administrador ou segredos de homologação. Auto-deploy deve permanecer desligado, revisão fixada após CI e aceite.
 
 A validação `scripts/check-coolify-compose.py <projeto> producao` confere isolamento, flags desativadas, roteamento e origem de produção. A CI renderiza ambos os arquivos com nomes padrão e UUIDs simulados. A configuração nova não autoriza a implantação antes de concluir backup externo/restauração e aceite da homologação.
+
+
+## Backup externo do CertGuard
+
+[Plano](plano-backup-externo.md), [operação](backup-externo.md), [ADR-012](adr/012-backup-externo.md) e [evidências/pendências](validation-backup-externo.md). Destino exclusivo confirmado em /srv/storage/backups/certguard no frank-note2; acesso SSH existente reutilizado. Scripts e testes preparados. Primeiro backup real, restauração, guarda da chave e agendamento ainda pendentes de entrada segura do responsável/acesso temporário. Não considerar esse gate aprovado apenas por existir a pasta.
