@@ -11,6 +11,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unicode/utf8"
 )
 
 const SessionAge = 8 * time.Hour
@@ -23,9 +24,24 @@ func Email(raw string) (string, error) {
 	}
 	return email, nil
 }
+
+// ValidatePassword applies the creation policy without changing existing credentials.
+func ValidatePassword(password string) error {
+	if !utf8.ValidString(password) {
+		return errors.New("senha contém caracteres inválidos")
+	}
+	if utf8.RuneCountInString(password) < 10 {
+		return errors.New("escolha uma senha com no mínimo 10 caracteres; você pode usar letras, números e símbolos")
+	}
+	// bcrypt limits input size; never truncate or change the stored hash format.
+	if len(password) > 72 {
+		return errors.New("senha muito longa; escolha uma senha mais curta")
+	}
+	return nil
+}
 func HashPassword(password string) (string, error) {
-	if len(password) < 12 || len(password) > 72 {
-		return "", errors.New("senha deve ter entre 12 e 72 bytes")
+	if err := ValidatePassword(password); err != nil {
+		return "", err
 	}
 	hash, e := bcrypt.GenerateFromPassword([]byte(password), 12)
 	return string(hash), e

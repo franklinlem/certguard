@@ -75,3 +75,39 @@ func TestLimiterConcurrent(t *testing.T) {
 		t.Fatal(allowed)
 	}
 }
+
+func TestPasswordCreationPolicy(t *testing.T) {
+	for _, tc := range []struct {
+		name     string
+		password string
+		valid    bool
+	}{
+		{"nove caracteres", "Abc123456", false},
+		{"dez caracteres", "Abc1234567", true},
+		{"nove caracteres Unicode", strings.Repeat("á", 9), false},
+		{"dez caracteres Unicode", strings.Repeat("á", 10), true},
+		{"símbolos permitidos", "Teste-123!", true},
+		{"limite bcrypt", strings.Repeat("a", 72), true},
+		{"acima do limite bcrypt", strings.Repeat("a", 73), false},
+		{"Unicode no limite bcrypt", strings.Repeat("á", 36), true},
+		{"Unicode acima do limite bcrypt", strings.Repeat("á", 37), false},
+		{"UTF-8 inválido", strings.Repeat("a", 10) + "\xff", false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			err := ValidatePassword(tc.password)
+			if (err == nil) != tc.valid {
+				t.Fatal("resultado inesperado de validação")
+			}
+			if err != nil && strings.Contains(err.Error(), "bytes") {
+				t.Fatal("mensagem técnica exposta ao usuário")
+			}
+		})
+	}
+	// Exercise hashing as well as validation for the newly accepted minimum.
+	for _, password := range []string{"Abc1234567", strings.Repeat("á", 10)} {
+		hash, err := HashPassword(password)
+		if err != nil || !Verify(hash, password) {
+			t.Fatal("senha válida não pôde ser usada")
+		}
+	}
+}

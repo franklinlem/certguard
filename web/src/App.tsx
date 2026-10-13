@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { Notifications } from "./Notifications";
 import { Alerts } from "./Alerts";
@@ -49,6 +49,30 @@ export function App() {
   const [historyLoading, setHistoryLoading] = useState(false);
   const [archive, setArchive] = useState<Endpoint | null>(null);
   const [notice, setNotice] = useState("");
+  const formPanel = useRef<HTMLElement>(null);
+  const nameInput = useRef<HTMLInputElement>(null);
+  const historyTitle = useRef<HTMLHeadingElement>(null);
+  const [reveal, setReveal] = useState<{
+    target: "form" | "history";
+  } | null>(null);
+  useEffect(() => {
+    if (!reveal) return;
+    const focusTarget =
+      reveal.target === "form" ? nameInput.current : historyTitle.current;
+    const scrollTarget =
+      reveal.target === "form" ? formPanel.current : historyTitle.current;
+    focusTarget?.focus({ preventScroll: true });
+    scrollTarget?.scrollIntoView({ behavior: "instant", block: "start" });
+  }, [reveal]);
+  function openEditor(endpoint: Endpoint | "new") {
+    setEditing(endpoint);
+    setReveal({ target: "form" });
+  }
+  function openDetails(endpoint: Endpoint) {
+    setSelected(endpoint);
+    setHistoryOffset(0);
+    setReveal({ target: "history" });
+  }
   const handleError = useCallback((e: unknown) => {
     if (e instanceof APIError && e.status === 401) {
       setSession(null);
@@ -297,7 +321,9 @@ export function App() {
             <button
               className="primary"
               disabled={busy}
-              onClick={() => setEditing("new")}
+              onClick={() => openEditor("new")}
+              aria-controls="endpoint-form-panel"
+              aria-expanded={editing === "new"}
             >
               Adicionar endpoint
             </button>
@@ -341,7 +367,12 @@ export function App() {
             )
           )}
           {editing && (
-            <section className="panel" aria-labelledby="form-title">
+            <section
+              ref={formPanel}
+              id="endpoint-form-panel"
+              className="panel"
+              aria-labelledby="form-title"
+            >
               <h2 id="form-title">
                 {editing === "new" ? "Adicionar endpoint" : "Editar endpoint"}
               </h2>
@@ -353,6 +384,7 @@ export function App() {
                 <label>
                   Nome
                   <input
+                    ref={nameInput}
                     name="name"
                     required
                     maxLength={200}
@@ -489,14 +521,20 @@ export function App() {
                     </button>
                     <button
                       disabled={busy}
-                      onClick={() => {
-                        setSelected(ep);
-                        setHistoryOffset(0);
-                      }}
+                      onClick={() => openDetails(ep)}
+                      aria-controls="endpoint-history-panel"
+                      aria-expanded={selected?.id === ep.id}
                     >
                       Detalhes e histórico
                     </button>
-                    <button disabled={busy} onClick={() => setEditing(ep)}>
+                    <button
+                      disabled={busy}
+                      onClick={() => openEditor(ep)}
+                      aria-controls="endpoint-form-panel"
+                      aria-expanded={
+                        editing !== null && editing !== "new" && editing.id === ep.id
+                      }
+                    >
                       Editar
                     </button>
                     <button
@@ -588,9 +626,13 @@ export function App() {
             onError={handleError}
           />
           {selected && (
-            <section className="panel" aria-labelledby="history-title">
+            <section
+              id="endpoint-history-panel"
+              className="panel"
+              aria-labelledby="history-title"
+            >
               <div className="section-header">
-                <h2 id="history-title">
+                <h2 ref={historyTitle} id="history-title" tabIndex={-1}>
                   Detalhes e histórico · {selected.name}
                 </h2>
                 <button onClick={() => setSelected(null)}>

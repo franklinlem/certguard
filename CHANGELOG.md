@@ -1,5 +1,22 @@
 # Histórico
 
+## Navegação para os painéis — 13/10/2026
+
+- Adicionar/editar endpoint posiciona o formulário e foca o campo Nome.
+- Detalhes e histórico posiciona e foca o título, inclusive em cliques repetidos. Atualizações do painel preservam o foco.
+- Regressão verificada em desktop e celular com lista longa e histórico pendente.
+
+## Ajuste de senhas — 13/10/2026
+
+- Criação de senha com mínimo de 10 caracteres Unicode, mantendo letras, números e símbolos.
+- CLI informa a regra quando a senha é curta, sem expor o conteúdo. Credenciais existentes preservadas.
+
+
+## Etapa 08 — homologação inicial online (13/10/2026)
+- PRs 12–14 integrados: Compose Raw, redes explícitas e identidade consistente no Coolify.
+- HTTPS válido, readiness e proteção de rotas verificadas externamente.
+- Administrador criado pelo responsável. Inspeção interna final e backup externo pendentes. Produção não implantada.
+
 ## Integração e inventário — 13/10/2026
 - PRs 1–11 integrados em main; dependências testadas sobre o produto completo.
 - Inventário somente leitura da Contabo/Coolify, DNS e pendências de HTTPS/backup registrados.

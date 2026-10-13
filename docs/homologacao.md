@@ -1,6 +1,6 @@
 # Roteiro de homologação — CertGuard
 
-Estado: inventário somente leitura executado em 13/10/2026; implantação e aceite ainda não executados na Contabo. Consulte [inventário](inventario-homologacao-2026-10-13.md) e [integração](integracao-prs-2026-10-13.md). Não é autorização para modificar recursos compartilhados.
+Estado: inventário somente leitura executado em 13/10/2026; implantação inicial executada; aceite completo ainda pendente. Consulte [evidências atuais](validation-etapa-08.md). Consulte [inventário](inventario-homologacao-2026-10-13.md) e [integração](integracao-prs-2026-10-13.md). Não é autorização para modificar recursos compartilhados.
 
 ## 1. Base revisável
 
@@ -18,15 +18,15 @@ Registrar versões Docker/Compose/Coolify/Traefik, serviços existentes, CPU/mem
 | Recursos livres e margem para build/migração | 4974 MiB disponíveis e 78G livres; pico de build ainda não medido |
 | Serviços/volumes/redes existentes a preservar | Inventariados; 25 containers existentes, nenhuma instância CertGuard |
 | Rede e integração nativa do proxy | Traefik v3.7, http/https, letsencrypt; futura rede do recurso ainda não criada |
-| DNS e HTTPS do domínio de homologação | A para VPS confirmado; HTTPS responde com certificado autoassinado |
-| Commit/imagens e CI | Código e7970ba1; evidências na integração; imagens de deploy ainda não publicadas |
-| Destino de backup fora da VPS | Pendente; Coolify com 0 destinos S3, backups locais sem restauração validada |
+| DNS e HTTPS do domínio de homologação | A para VPS confirmado; HTTPS confiável Let's Encrypt verificado em 13/10/2026 |
+| Commit/imagens e CI | Código 66db5902 implantado; CI aprovada; imagens construídas no Coolify |
+| Destino de backup fora da VPS | franklin@frank-note2 escolhido; configuração/verificação adiada e ainda pendente |
 
 Qualquer mudança com risco de interrupção/perda de dados exige autorização específica após apresentar impacto e rollback concretos. Não instalar segundo Traefik nem alterar firewall/redes/volumes de outros serviços por conveniência.
 
 ## 3. Aplicação isolada
 
-Projeto `certguard-dev`, banco/volume/segredos próprios. Compose base; nunca compose.dev na VPS. Somente web:8080 conectado pelo Coolify ao proxy existente. API/db sem portas públicas; sem docker.sock ou volumes de outros projetos. Auto-deploy desligado até validar rollback. Orçamento configurado inclui db 512MiB/API 256MiB/web 128MiB, além de build/migrate e serviços existentes; conferir disponibilidade real antes de executar.
+Projeto `certguard-dev`, banco/volume/segredos próprios. Compose específico `/compose.coolify.yaml` em modo Raw nesta homologação, conforme ADR-010; nunca compose.dev na VPS. Somente web:8080 conectado pelo Coolify ao proxy existente. API/db sem portas públicas; sem docker.sock ou volumes de outros projetos. Auto-deploy desligado até validar rollback. Orçamento configurado inclui db 512MiB/API 256MiB/web 128MiB, além de build/migrate e serviços existentes; conferir disponibilidade real antes de executar.
 
 Secrets: senha PostgreSQL alfanumérica forte, PUBLIC_APP_URL HTTPS exata, APP_ENV=production. Chave de canais e token de métricas opcionais nesta primeira subida; preservar fora do Git. `SCHEDULER_ENABLED=false`, `RETENTION_ENABLED=false`, `DELIVERY_ENABLED=false`. Readiness deve ficar 200 somente com schema completo.
 

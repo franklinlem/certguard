@@ -17,6 +17,8 @@ test("administrador cadastra, edita, pausa e arquiva endpoint sem acessar destin
   await page
     .getByRole("button", { name: "Adicionar endpoint", exact: true })
     .click();
+  await expect(page.getByLabel("Nome", { exact: true })).toBeFocused();
+  await expect(page.getByRole("heading", { name: "Adicionar endpoint", exact: true })).toBeInViewport();
   await page.getByLabel("Nome", { exact: true }).fill("Exemplo E2E");
   await page.getByLabel("Hostname", { exact: true }).fill("example.com");
   await page.getByRole("button", { name: "Salvar", exact: true }).click();
@@ -34,6 +36,8 @@ test("administrador cadastra, edita, pausa e arquiva endpoint sem acessar destin
     page.getByText("Painel atualizado.", { exact: true }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Editar", exact: true }).click();
+  await expect(page.getByLabel("Nome", { exact: true })).toBeFocused();
+  await expect(page.getByRole("heading", { name: "Editar endpoint", exact: true })).toBeInViewport();
   await page.getByLabel("Nome", { exact: true }).fill("Exemplo atualizado");
   await page.getByRole("button", { name: "Salvar", exact: true }).click();
   await expect(
@@ -46,6 +50,12 @@ test("administrador cadastra, edita, pausa e arquiva endpoint sem acessar destin
   await page
     .getByRole("button", { name: "Detalhes e histórico", exact: true })
     .click();
+  const historyTitle = page.getByRole("heading", { name: "Detalhes e histórico · Exemplo atualizado", exact: true });
+  await expect(historyTitle).toBeFocused();
+  await expect(historyTitle).toBeInViewport();
+  await page.getByRole("button", { name: "Detalhes e histórico", exact: true }).click();
+  await expect(historyTitle).toBeFocused();
+  await expect(historyTitle).toBeInViewport();
   await expect(
     page.getByText("Nenhuma verificação nesta página.", { exact: true }),
   ).toBeVisible();

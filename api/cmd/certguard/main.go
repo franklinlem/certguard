@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/franklinlem/certguard/api/internal/alerts"
+	"github.com/franklinlem/certguard/api/internal/auth"
 	"github.com/franklinlem/certguard/api/internal/certificate"
 	"github.com/franklinlem/certguard/api/internal/httpapi"
 	"github.com/franklinlem/certguard/api/internal/scheduler"
@@ -89,13 +90,9 @@ func run() error {
 		if len(args) != 2 {
 			return fmt.Errorf("uso: certguard admin-create email (senha via stdin)")
 		}
-		password, err := io.ReadAll(io.LimitReader(os.Stdin, 74))
+		secret, err := readBootstrapPassword(os.Stdin)
 		if err != nil {
-			return fmt.Errorf("não foi possível ler a senha")
-		}
-		secret := strings.TrimSuffix(strings.TrimSuffix(string(password), "\n"), "\r")
-		if len(password) > 73 {
-			return fmt.Errorf("senha excede limite")
+			return err
 		}
 		if err = (&storage.Store{Pool: pool}).Bootstrap(ctx, args[1], secret); err != nil {
 			return fmt.Errorf("bootstrap não concluído; confira senha, e-mail, banco e existência de administrador")
@@ -183,4 +180,20 @@ func run() error {
 		return server.Shutdown(shutdown)
 	}
 	return nil
+}
+
+// readBootstrapPassword bounds stdin and keeps validation errors free of secrets.
+func readBootstrapPassword(input io.Reader) (string, error) {
+	password, err := io.ReadAll(io.LimitReader(input, 75))
+	if err != nil {
+		return "", fmt.Errorf("não foi possível ler a senha")
+	}
+	if len(password) == 75 {
+		return "", fmt.Errorf("senha muito longa; escolha uma senha mais curta")
+	}
+	secret := strings.TrimSuffix(strings.TrimSuffix(string(password), "\n"), "\r")
+	if err := auth.ValidatePassword(secret); err != nil {
+		return "", err
+	}
+	return secret, nil
 }
