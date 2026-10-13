@@ -36,10 +36,32 @@ func TestPostgres(t *testing.T) {
 		t.Fatal(e)
 	}
 	defer pool.Close()
+	// Simula atualização de uma instalação da etapa 02 com registros existentes.
+	if _, e = pool.Exec(ctx, initial); e != nil {
+		t.Fatal(e)
+	}
+	if _, e = pool.Exec(ctx, auth); e != nil {
+		t.Fatal(e)
+	}
+	if _, e = pool.Exec(ctx, `CREATE TABLE schema_migrations(version INTEGER PRIMARY KEY,applied_at TIMESTAMPTZ NOT NULL DEFAULT now()); INSERT INTO schema_migrations(version) VALUES(1),(2); INSERT INTO monitored_endpoints(name,hostname,enabled) VALUES('Legado','legacy.example.com',true),('Pausado','paused.example.com',false)`); e != nil {
+		t.Fatal(e)
+	}
+	if _, e = pool.Exec(ctx, `INSERT INTO certificate_checks(endpoint_id,checked_at,status,code,duration_ms,metadata) SELECT id,now(),'healthy','success',250,'{}' FROM monitored_endpoints WHERE hostname='legacy.example.com'`); e != nil {
+		t.Fatal(e)
+	}
 	for range 2 {
 		if e = Up(ctx, pool); e != nil {
 			t.Fatal(e)
 		}
+	}
+	var metricChecks, sumMS int64
+	var buckets []int64
+	if e = pool.QueryRow(ctx, "SELECT checks_total,duration_ms_sum,duration_buckets FROM operational_metrics").Scan(&metricChecks, &sumMS, &buckets); e != nil || metricChecks != 1 || sumMS != 250 || buckets[0] != 0 || buckets[1] != 1 || buckets[7] != 1 {
+		t.Fatal("seed de métricas", metricChecks, sumMS, buckets, e)
+	}
+	var scheduled, paused int
+	if e = pool.QueryRow(ctx, "SELECT count(*) FILTER (WHERE enabled AND next_check_at IS NOT NULL),count(*) FILTER (WHERE NOT enabled AND next_check_at IS NULL) FROM monitored_endpoints").Scan(&scheduled, &paused); e != nil || scheduled != 1 || paused != 1 {
+		t.Fatal("migração de agendas", scheduled, paused, e)
 	}
 	var id string
 	if e = pool.QueryRow(ctx, "INSERT INTO monitored_endpoints(name,hostname) VALUES('Exemplo','example.com') RETURNING id").Scan(&id); e != nil {

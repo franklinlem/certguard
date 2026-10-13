@@ -4,14 +4,21 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/franklinlem/certguard/api/internal/alerts"
 	"github.com/franklinlem/certguard/api/internal/certificate"
 	"github.com/franklinlem/certguard/api/internal/httpapi"
+	"github.com/franklinlem/certguard/api/internal/scheduler"
+	"github.com/franklinlem/certguard/api/internal/storage"
 	"github.com/franklinlem/certguard/api/migrations"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"io"
 	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
+	"strings"
+	"sync"
 	"syscall"
 	"time"
 )
@@ -57,7 +64,7 @@ func run() error {
 		}
 		return nil
 	}
-	if mode != "serve" && mode != "migrate" {
+	if mode != "serve" && mode != "migrate" && mode != "admin-create" {
 		return fmt.Errorf("comando desconhecido")
 	}
 	url := os.Getenv("DATABASE_URL")
@@ -78,7 +85,90 @@ func run() error {
 		slog.Info("migrações aplicadas")
 		return nil
 	}
-	server := &http.Server{Addr: ":8080", Handler: httpapi.Handler(pool), ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 10 * time.Second, WriteTimeout: 10 * time.Second, IdleTimeout: 30 * time.Second, MaxHeaderBytes: 16384}
+	if mode == "admin-create" {
+		if len(args) != 2 {
+			return fmt.Errorf("uso: certguard admin-create email (senha via stdin)")
+		}
+		password, err := io.ReadAll(io.LimitReader(os.Stdin, 74))
+		if err != nil {
+			return fmt.Errorf("não foi possível ler a senha")
+		}
+		secret := strings.TrimSuffix(strings.TrimSuffix(string(password), "\n"), "\r")
+		if len(password) > 73 {
+			return fmt.Errorf("senha excede limite")
+		}
+		if err = (&storage.Store{Pool: pool}).Bootstrap(ctx, args[1], secret); err != nil {
+			return fmt.Errorf("bootstrap não concluído; confira senha, e-mail, banco e existência de administrador")
+		}
+		slog.Info("administrador inicial criado")
+		return nil
+	}
+	cfg, err := scheduler.Load(os.Getenv)
+	if err != nil {
+		return err
+	}
+	var secret *alerts.Cipher
+	if key := os.Getenv("ALERT_ENCRYPTION_KEY"); key != "" {
+		secret, err = alerts.NewCipher(key)
+		if err != nil {
+			return fmt.Errorf("ALERT_ENCRYPTION_KEY inválida")
+		}
+	}
+	deliver := false
+	if flag := os.Getenv("DELIVERY_ENABLED"); flag != "" {
+		deliver, err = strconv.ParseBool(flag)
+		if err != nil {
+			return fmt.Errorf("DELIVERY_ENABLED inválido")
+		}
+	}
+	if deliver && secret == nil {
+		return fmt.Errorf("chave de canais obrigatória para habilitar entregas")
+	}
+	if deliver {
+		verify, cancel := context.WithTimeout(ctx, 5*time.Second)
+		err = (&storage.Store{Pool: pool, Cipher: secret}).VerifyChannels(verify)
+		cancel()
+		if err != nil {
+			return fmt.Errorf("canais ativos indisponíveis; confira chave e banco antes de iniciar entregas")
+		}
+	}
+	app, err := httpapi.NewApp(&storage.Store{Pool: pool, Cipher: secret}, os.Getenv("PUBLIC_APP_URL"), os.Getenv("APP_ENV") == "development")
+	if err != nil {
+		return err
+	}
+	app.MetricsToken = os.Getenv("METRICS_TOKEN")
+	if err = httpapi.ValidateMetricsToken(app.MetricsToken); err != nil {
+		return err
+	}
+	app.Background = cfg
+	app.DeliveryEnabled = deliver
+	if cfg.Enabled || cfg.RetentionEnabled || deliver {
+		pc, err := pgxpool.ParseConfig(url)
+		if err != nil {
+			return fmt.Errorf("configuração PostgreSQL inválida")
+		}
+		pc.MaxConns = int32(cfg.Workers + 2)
+		backgroundPool, err := pgxpool.NewWithConfig(ctx, pc)
+		if err != nil {
+			return fmt.Errorf("pool de agendamento indisponível")
+		}
+		defer backgroundPool.Close()
+		backgroundCtx, cancel := context.WithCancel(ctx)
+		finished := make(chan struct{})
+		go func() {
+			defer close(finished)
+			store := &storage.Store{Pool: backgroundPool, Cipher: secret}
+			var workers sync.WaitGroup
+			workers.Go(func() { _ = scheduler.Run(backgroundCtx, store, cfg) })
+			if deliver {
+				workers.Go(func() { alerts.Run(backgroundCtx, store, alerts.NewTransport().Send) })
+			}
+			workers.Wait()
+		}()
+		defer func() { cancel(); <-finished }()
+	}
+	slog.Info("configuração de tarefas", "agendamento", cfg.Enabled, "workers", cfg.Workers, "retenção", cfg.RetentionEnabled)
+	server := &http.Server{Addr: ":8080", Handler: app.Handler(), ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 10 * time.Second, WriteTimeout: 20 * time.Second, IdleTimeout: 30 * time.Second, MaxHeaderBytes: 16384}
 	done := make(chan error, 1)
 	go func() { done <- server.ListenAndServe() }()
 	slog.Info("API iniciada", "porta", 8080)
