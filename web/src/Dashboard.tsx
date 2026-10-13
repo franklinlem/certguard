@@ -45,14 +45,16 @@ export function SummaryCards({
 
 export function CertificateDetails({
   result,
+  title = "Último resultado do destino atual",
 }: {
   result?: Check["result"] | null;
+  title?: string;
 }) {
   if (!result) return <p>Ainda não há resultado para o destino atual.</p>;
   const cert = result.certificate;
   return (
     <section aria-label="Detalhes do último resultado">
-      <h3>Último resultado do destino atual</h3>
+      <h3>{title}</h3>
       <dl>
         <dt>Destino observado</dt>
         <dd>

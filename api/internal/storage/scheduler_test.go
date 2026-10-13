@@ -147,6 +147,10 @@ func TestPostgresScheduledConcurrencyAndCancellation(t *testing.T) {
 	if count.Load() != 1 {
 		t.Fatal("execução duplicada", count.Load())
 	}
+	page, err := s.Alerts(ctx, "all", e.ID, 20, 0)
+	if err != nil || len(page.Items) != 1 {
+		t.Fatal("evento duplicado após disputa de workers", page, err)
+	}
 }
 
 func TestPostgresRetention(t *testing.T) {

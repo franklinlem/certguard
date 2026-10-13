@@ -151,6 +151,31 @@ func (a *App) Handler() http.Handler {
 		a.setCookie(w, "", -1)
 		w.WriteHeader(204)
 	}))
+	mux.HandleFunc("GET /api/v1/alerts", a.protected(func(w http.ResponseWriter, r *http.Request) {
+		l, o, ok := pagination(w, r)
+		if !ok {
+			return
+		}
+		state := r.URL.Query().Get("state")
+		if state == "" {
+			state = "active"
+		}
+		if state != "all" && state != "active" && state != "resolved" {
+			fail(w, 400, "Filtro de alertas inválido.")
+			return
+		}
+		endpoint := r.URL.Query().Get("endpoint_id")
+		if endpoint != "" && !uuidPattern.MatchString(endpoint) {
+			fail(w, 400, "Identificador inválido.")
+			return
+		}
+		page, err := a.store.Alerts(r.Context(), state, endpoint, l, o)
+		if err != nil {
+			resultError(w, err)
+			return
+		}
+		send(w, 200, page)
+	}))
 	mux.HandleFunc("GET /api/v1/dashboard", a.protected(func(w http.ResponseWriter, r *http.Request) {
 		l, o, ok := pagination(w, r)
 		if !ok {

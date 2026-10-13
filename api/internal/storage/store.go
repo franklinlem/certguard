@@ -177,18 +177,35 @@ func (s *Store) Update(ctx context.Context, id string, patch func(*Input) error)
 	if e = i.Validate(); e != nil {
 		return Endpoint{}, e
 	}
+	oldHostname := v.Hostname
 	v, e = scan(tx.QueryRow(ctx, "UPDATE monitored_endpoints SET name=$2,hostname=$3,port=$4,enabled=$5,interval_minutes=$6,warning_days=$7,critical_days=$8,next_check_at=CASE WHEN NOT $5 THEN NULL WHEN NOT enabled OR hostname<>$3 OR interval_minutes<>$6 THEN clock_timestamp()+random()*interval '30 seconds' ELSE next_check_at END,updated_at=now() WHERE id=$1 RETURNING "+columns, id, i.Name, i.Hostname, i.Port, i.Enabled, i.Interval, i.Warning, i.Critical))
 	if e != nil {
 		return Endpoint{}, e
 	}
+	if oldHostname != v.Hostname {
+		if _, e = tx.Exec(ctx, "UPDATE alert_events SET resolved_at=clock_timestamp(),resolution='target_changed' WHERE endpoint_id=$1 AND resolved_at IS NULL", id); e != nil {
+			return Endpoint{}, e
+		}
+	}
 	return v, tx.Commit(ctx)
 }
 func (s *Store) Archive(ctx context.Context, id string) error {
-	tag, e := s.Pool.Exec(ctx, "UPDATE monitored_endpoints SET deleted_at=now(),enabled=false,next_check_at=NULL,updated_at=now() WHERE id=$1 AND deleted_at IS NULL", id)
-	if e == nil && tag.RowsAffected() == 0 {
+	tx, e := s.Pool.Begin(ctx)
+	if e != nil {
+		return e
+	}
+	defer func() { _ = tx.Rollback(context.Background()) }()
+	tag, e := tx.Exec(ctx, "UPDATE monitored_endpoints SET deleted_at=now(),enabled=false,next_check_at=NULL,updated_at=now() WHERE id=$1 AND deleted_at IS NULL", id)
+	if e != nil {
+		return e
+	}
+	if tag.RowsAffected() == 0 {
 		return pgx.ErrNoRows
 	}
-	return e
+	if _, e = tx.Exec(ctx, "UPDATE alert_events SET resolved_at=clock_timestamp(),resolution='archived' WHERE endpoint_id=$1 AND resolved_at IS NULL", id); e != nil {
+		return e
+	}
+	return tx.Commit(ctx)
 }
 
 type Check struct {
@@ -236,6 +253,9 @@ func saveCheck(ctx context.Context, tx pgx.Tx, endpoint Endpoint, inspect Inspec
 		return Check{}, e
 	}
 	if _, e = tx.Exec(ctx, "UPDATE monitored_endpoints SET last_check_at=clock_timestamp(),next_check_at=clock_timestamp()+interval_minutes*interval '1 minute'*(1+random()*0.1),updated_at=clock_timestamp() WHERE id=$1", id); e != nil {
+		return Check{}, e
+	}
+	if e = recordAlert(ctx, tx, endpoint, out); e != nil {
 		return Check{}, e
 	}
 	return out, tx.Commit(ctx)

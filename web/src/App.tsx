@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import type { FormEvent } from "react";
+import { Alerts } from "./Alerts";
 import { api, APIError } from "./api";
 import type { Check, Endpoint, Session, Dashboard } from "./api";
 
@@ -34,6 +35,7 @@ export function App() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [items, setItems] = useState<Endpoint[]>([]);
+  const [alertRevision, setAlertRevision] = useState(0);
   const [dashboard, setDashboard] = useState<Dashboard | null>(null);
   const [dashboardLoading, setDashboardLoading] = useState(false);
   const [dashboardError, setDashboardError] = useState(false);
@@ -80,6 +82,7 @@ export function App() {
       const data = await api<Dashboard>(`/dashboard?limit=20&offset=${offset}`);
       setItems(data.items);
       setDashboard(data);
+      setAlertRevision((n) => n + 1);
       setSelected((previous) =>
         previous
           ? (data.items.find((e) => e.id === previous.id) ?? null)
@@ -302,7 +305,8 @@ export function App() {
             {session.background?.scheduler_enabled
               ? "Agendamento habilitado. Atualize a lista para consultar as próximas execuções."
               : "Agendamento desabilitado neste ambiente. Use a verificação manual."}{" "}
-            Os alertas ainda não estão ativos.
+            Os eventos de alerta são registrados nas novas verificações; envio
+            externo ainda não implementado.
             {session.background?.retention_enabled &&
               ` Resultados com mais de ${session.background.retention_days} dias são removidos gradualmente, preservando o último de cada endpoint.`}
           </p>
@@ -574,6 +578,7 @@ export function App() {
               </div>
             </section>
           )}
+          <Alerts revision={alertRevision} onError={handleError} />
           {selected && (
             <section className="panel" aria-labelledby="history-title">
               <div className="section-header">

@@ -2,7 +2,7 @@
 
 Monitor self-hosted de certificados TLS, com validação de destinos e proteção SSRF.
 
-**Estado: autenticação, endpoints, verificações manuais, agendamento automático opt-in e dashboard. Ainda não é o MVP completo nem uma versão pronta para produção.**
+**Estado: autenticação, endpoints, verificações manuais, agendamento automático opt-in, dashboard e eventos de alerta. Ainda não é o MVP completo nem uma versão pronta para produção.**
 
 ## Entregue nesta etapa
 - Go: inspeção TLS via CLI, validação de cadeia/hostname, SANs, fingerprint, validade e classificação.
@@ -13,10 +13,11 @@ Monitor self-hosted de certificados TLS, com validação de destinos e proteçã
 - Agendador com workers limitados, jitter, bloqueio por endpoint e próxima execução persistida.
 - Retenção opt-in em lotes, preservando o último resultado de cada endpoint.
 - Dashboard global, status por endpoint, detalhes de certificado e gráfico acessível de histórico.
+- Motor de alertas com deduplicação, resolução e histórico de eventos observados.
 - Docker Compose e GitHub Actions com integração PostgreSQL e E2E.
 - Planejamento, decisões técnicas, modelo de ameaças e roteiro de homologação.
 
-Alertas e recuperação de senha pertencem aos próximos incrementos. As verificações manuais estão restritas ao administrador autenticado.
+Entrega de alertas por SMTP/webhook e recuperação de senha pertencem aos próximos incrementos. As verificações manuais estão restritas ao administrador autenticado.
 
 ## Desenvolvimento
 Requisitos: Go 1.27.2, Node.js 22.23.2+ e Docker com Compose v2.
@@ -85,3 +86,9 @@ Planejamento: [etapa 03](docs/plano-etapa-03.md). Decisão: [ADR-005](docs/adr/0
 Indicadores incluem todos os endpoints não arquivados, mesmo fora da página atual. O status é o último observado, com data explícita. Detalhes e gráfico mostram dados reais persistidos; erros sem certificado não viram dias fictícios. Use **Atualizar painel** para obter um novo snapshot. O gráfico exibe até 20 checks da página, com tabela acessível.
 
 [Planejamento](docs/plano-etapa-04.md), [ADR-006](docs/adr/006-dashboard-snapshot.md) e [validação](docs/validation-etapa-04.md).
+
+## Eventos de alerta (etapa 05)
+
+Novos checks registram problemas e recuperações, deduplicando repetições. Consulte **Alertas e eventos** no painel e expanda a observação original. Não há envio por e-mail/webhook nesta entrega; canais e retries serão acrescentados no próximo incremento.
+
+[Planejamento](docs/plano-etapa-05.md), [regras e operação](docs/alerts.md), [ADR-007](docs/adr/007-alert-episodes.md) e [validação](docs/validation-etapa-05.md).

@@ -1,9 +1,9 @@
 openapi: 3.0.3
 info:
   title: CertGuard — API administrativa
-  version: 0.0.4
+  version: 0.0.5
   description: 'API administrativa: sessões, endpoints, checks persistidos, configuração
-    de agendamento e dashboard.'
+    de agendamento e dashboard. Eventos de alerta transacionais; sem entrega externa.'
 components:
   securitySchemes:
     session:
@@ -439,6 +439,110 @@ components:
           type: integer
         offset:
           type: integer
+    AlertEvent:
+      type: object
+      required:
+      - id
+      - endpoint_id
+      - check_id
+      - endpoint_name
+      - hostname
+      - port
+      - event_type
+      - severity
+      - threshold_days
+      - snapshot
+      - created_at
+      - resolved_at
+      - resolution
+      properties:
+        id:
+          type: string
+          format: uuid
+        endpoint_id:
+          type: string
+          format: uuid
+        check_id:
+          type: string
+          format: uuid
+          nullable: true
+        endpoint_name:
+          type: string
+        hostname:
+          type: string
+        port:
+          type: integer
+          enum:
+          - 443
+        event_type:
+          type: string
+        severity:
+          type: string
+          enum:
+          - info
+          - warning
+          - critical
+        threshold_days:
+          type: integer
+        snapshot:
+          $ref: '#/components/schemas/Result'
+        created_at:
+          type: string
+          format: date-time
+        resolved_at:
+          type: string
+          format: date-time
+          nullable: true
+        resolution:
+          type: string
+          enum:
+          - recovered
+          - changed
+          - target_changed
+          - archived
+          nullable: true
+    AlertSummary:
+      type: object
+      required:
+      - active
+      - critical
+      - resolved
+      - info
+      properties:
+        active:
+          type: integer
+          minimum: 0
+        critical:
+          type: integer
+          minimum: 0
+        resolved:
+          type: integer
+          minimum: 0
+        info:
+          type: integer
+          minimum: 0
+    AlertPage:
+      type: object
+      required:
+      - items
+      - summary
+      - limit
+      - offset
+      - generated_at
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/AlertEvent'
+        summary:
+          $ref: '#/components/schemas/AlertSummary'
+        limit:
+          type: integer
+        offset:
+          type: integer
+        generated_at:
+          type: string
+          format: date-time
   parameters:
     Origin:
       name: Origin
@@ -1128,3 +1232,74 @@ paths:
       parameters:
       - $ref: '#/components/parameters/limit'
       - $ref: '#/components/parameters/offset'
+  /api/v1/alerts:
+    get:
+      summary: Eventos de alerta persistidos; sem envio de notificações
+      security:
+      - session: []
+      responses:
+        '200':
+          description: Operação concluída
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AlertPage'
+        '400':
+          description: Entrada inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Credenciais ou sessão inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Origem ou CSRF inválido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Registro não encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Conflito, pausa, lock ou cooldown
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Limite excedido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Indisponibilidade temporária
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      parameters:
+      - $ref: '#/components/parameters/limit'
+      - $ref: '#/components/parameters/offset'
+      - name: state
+        in: query
+        schema:
+          type: string
+          enum:
+          - all
+          - active
+          - resolved
+          default: active
+      - name: endpoint_id
+        in: query
+        schema:
+          type: string
+          format: uuid

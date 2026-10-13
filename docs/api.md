@@ -1,4 +1,4 @@
-# API implementada — etapa 04
+# API implementada — etapa 05
 
 Todas as respostas de erro usam `{ "error": "mensagem em português" }`, sem SQL, secrets ou dados internos. Corpos JSON limitados a 8 KiB, campos desconhecidos rejeitados.
 
@@ -9,6 +9,7 @@ Todas as respostas de erro usam `{ "error": "mensagem em português" }`, sem SQL
 | POST | /api/v1/auth/login | Origin exata; e-mail/senha; retorna usuário, csrf_token e cookie |
 | GET | /api/v1/auth/me | Sessão válida; retorna usuário e csrf_token |
 | POST | /api/v1/auth/logout | Sessão, Origin e CSRF; revoga sessão |
+| GET | /api/v1/alerts | Eventos e indicadores; sessão, filtros de estado/endpoint e paginação |
 | GET | /api/v1/dashboard | Indicadores globais e endpoints paginados; sessão obrigatória |
 | GET/POST | /api/v1/endpoints | Lista paginada / cadastra |
 | GET/PATCH/DELETE | /api/v1/endpoints/{id} | Consulta / alteração parcial / arquivamento |
@@ -26,3 +27,5 @@ Detalhes e schemas: openapi.yaml. Códigos do motor: success, blocked_target, dn
 Login e `/auth/me` acrescentam `background`: `scheduler_enabled`, `check_workers`, `retention_enabled`, `retention_days`. São configurações desta instância, não uma medição de saúde do executor. Endpoints incluem `next_check_at` anulável. Check manual também atualiza a agenda; pausa/arquivo removem a próxima execução. Retenção habilitada pode reduzir o histórico, preservando sempre o último resultado.
 
 Dashboard: `summary` contém total, enabled, paused, healthy, warning, critical, errors, unchecked e expiring_30_days. `items` segue o endpoint acrescido de `latest` (Result ou null); `generated_at` identifica o snapshot. Limite/offset iguais aos endpoints. Indicadores incluem pausados e excluem arquivados. Status do último check do hostname/porta atuais; vencimento entre agora e 30 dias, excluindo expirados. Não dispara checks. Veja ADR-006.
+
+Alertas: `state=active` por padrão (all/active/resolved), `endpoint_id` UUID opcional, limit/offset existentes. Retorna items, summary, generated_at, limit e offset. summary inclui active, critical (ativos), resolved (problemas resolvidos) e info (recuperações); contadores independem do filtro state/página. Eventos incluem snapshot e referência check_id anulável após retenção. Endpoint inexistente retorna lista vazia. Sem envio ou resolução manual.
