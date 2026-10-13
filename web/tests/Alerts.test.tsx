@@ -55,9 +55,12 @@ test("lista problemas ativos, filtra eventos e preserva observação sem check",
   expect(
     screen.getByText(/Removido pela retenção; observação preservada/),
   ).toBeTruthy();
-  fireEvent.change(screen.getByLabelText("Exibir eventos"), {
-    target: { value: "all" },
-  });
+  fireEvent.change(
+    screen.getByRole("combobox", { name: "Exibir eventos" }),
+    {
+      target: { value: "all" },
+    },
+  );
   await waitFor(() =>
     expect(mock).toHaveBeenCalledWith(
       "/api/v1/alerts?state=all&limit=20&offset=0",
@@ -87,21 +90,19 @@ test("erro não aparece como lista vazia e permite nova tentativa", async () => 
 test("resolução administrativa não é descrita como recuperação TLS", async () => {
   vi.stubGlobal(
     "fetch",
-    vi
-      .fn()
-      .mockResolvedValue(
-        new Response(
-          JSON.stringify(
-            page([
-              {
-                ...event,
-                resolved_at: "2026-10-13T13:00:00Z",
-                resolution: "archived",
-              },
-            ]),
-          ),
+    vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify(
+          page([
+            {
+              ...event,
+              resolved_at: "2026-10-13T13:00:00Z",
+              resolution: "archived",
+            },
+          ]),
         ),
       ),
+    ),
   );
   render(<Alerts revision={0} onError={vi.fn()} />);
   expect(await screen.findByText(/Endpoint arquivado/)).toBeTruthy();

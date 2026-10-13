@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useId, useState } from "react";
 import { api } from "./api";
 import type { AlertPage } from "./api";
 import { CertificateDetails } from "./Dashboard";
@@ -43,6 +43,7 @@ export function Alerts({
   revision: number;
   onError: (e: unknown) => void;
 }) {
+  const filterId = useId();
   const [state, setState] = useState("active");
   const [offset, setOffset] = useState(0);
   const [page, setPage] = useState<AlertPage | null>(null);
@@ -84,21 +85,20 @@ export function Alerts({
         Eventos gerados por novas verificações. Entrega por e-mail e webhook
         ainda não implementada. Pausar o monitoramento não confirma recuperação.
       </p>
-      <label>
-        Exibir eventos
-        <select
-          value={state}
-          disabled={loading}
-          onChange={(e) => {
-            setOffset(0);
-            setState(e.target.value);
-          }}
-        >
-          <option value="active">Problemas ativos</option>
-          <option value="all">Todos os eventos</option>
-          <option value="resolved">Resolvidos e recuperações</option>
-        </select>
-      </label>
+      <label htmlFor={filterId}>Exibir eventos</label>
+      <select
+        id={filterId}
+        value={state}
+        disabled={loading}
+        onChange={(e) => {
+          setOffset(0);
+          setState(e.target.value);
+        }}
+      >
+        <option value="active">Problemas ativos</option>
+        <option value="all">Todos os eventos</option>
+        <option value="resolved">Resolvidos e recuperações</option>
+      </select>
       {loading ? (
         <p role="status">Carregando alertas…</p>
       ) : failed ? (
