@@ -19,11 +19,17 @@ export type Endpoint = {
   critical_days: number;
   last_check_at: string | null;
   next_check_at: string | null;
+  latest?: Check["result"] | null;
 };
 export type Check = {
   id: string;
   result: {
     hostname: string;
+    port?: number;
+    resolved_ip?: string;
+    tls_version?: string;
+    cipher_suite?: string;
+    duration_ms?: number;
     status: string;
     code: string;
     checked_at: string;
@@ -32,6 +38,13 @@ export type Check = {
     chain_valid?: boolean;
     certificate?: {
       issuer: string;
+      subject?: string;
+      serial_number?: string;
+      dns_names?: string[];
+      ip_addresses?: string[];
+      email_addresses?: string[];
+      uris?: string[];
+      not_before?: string;
       fingerprint_sha256: string;
       not_after: string;
     };
@@ -69,3 +82,22 @@ export async function api<T>(
   }
   return res.status === 204 ? (undefined as T) : res.json();
 }
+
+export type Summary = {
+  total: number;
+  enabled: number;
+  paused: number;
+  healthy: number;
+  warning: number;
+  critical: number;
+  errors: number;
+  unchecked: number;
+  expiring_30_days: number;
+};
+export type Dashboard = {
+  summary: Summary;
+  items: Endpoint[];
+  generated_at: string;
+  limit: number;
+  offset: number;
+};

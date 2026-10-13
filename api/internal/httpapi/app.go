@@ -151,6 +151,18 @@ func (a *App) Handler() http.Handler {
 		a.setCookie(w, "", -1)
 		w.WriteHeader(204)
 	}))
+	mux.HandleFunc("GET /api/v1/dashboard", a.protected(func(w http.ResponseWriter, r *http.Request) {
+		l, o, ok := pagination(w, r)
+		if !ok {
+			return
+		}
+		d, err := a.store.Dashboard(r.Context(), l, o)
+		if err != nil {
+			resultError(w, err)
+			return
+		}
+		send(w, 200, d)
+	}))
 	mux.HandleFunc("GET /api/v1/endpoints", a.protected(a.list))
 	mux.HandleFunc("POST /api/v1/endpoints", a.protected(a.create))
 	mux.HandleFunc("GET /api/v1/endpoints/{id}", a.protected(a.get))
