@@ -1,6 +1,6 @@
 # Implantação planejada — Coolify e Traefik
 
-**Homologação inicial implantada em 13/10/2026; produção não implantada. Consulte [evidências e pendências](validation-etapa-08.md). Não alterar configurações globais do proxy nem serviços existentes.**
+**Homologação implantada em 13/10/2026; produção inicial implantada em 22/10/2026. Consulte [evidências de produção e pendências](validation-producao-2026-10-22.md). Administrador de produção ainda precisa ser criado por entrada segura. Scheduler, retenção e entregas permanecem desligados. Não alterar configurações globais do proxy nem serviços existentes.**
 
 | Ambiente | Domínio | Projeto Compose | Banco/volume/segredos |
 |---|---|---|---|
@@ -45,8 +45,13 @@ Seguir [roteiro de homologação](homologacao.md). Fixar SHA e schema esperado (
 Responsável escolheu franklin@frank-note2 (servidor físico Linux Mint XFCE com Docker, Hermes, outros backups e Uptime Kuma). Verificação adiada por solicitação dele. Não é backup configurado: diretório, transporte, criptografia, retenção e restauração permanecem pendentes. Não acessar ou modificar serviços desse host sem o próximo escopo definido.
 
 
-## Configuração exclusiva de produção (preparada, não implantada)
+## Configuração exclusiva de produção (implantada em 22/10/2026)
 
 Usar `/compose.coolify.prod.yaml` em recurso novo do ambiente `producao`, no modo Raw. O recurso recebe UUID exclusivo, segredo PostgreSQL exclusivo gerado no Coolify e volume próprio. O domínio e a origem são `https://certguard.franklem.uk`; routers, middleware e service Traefik usam prefixo `certguard-prod`, sem reutilizar os da homologação. Não clonar o banco, sessões, administrador ou segredos de homologação. Auto-deploy deve permanecer desligado, revisão fixada após CI e aceite.
 
-A validação `scripts/check-coolify-compose.py <projeto> producao` confere isolamento, flags desativadas, roteamento e origem de produção. A CI renderiza ambos os arquivos com nomes padrão e UUIDs simulados. A configuração nova não autoriza a implantação antes de concluir backup externo/restauração e aceite da homologação.
+A validação `scripts/check-coolify-compose.py <projeto> producao` confere isolamento, flags desativadas, roteamento e origem de produção. A CI renderiza ambos os arquivos com nomes padrão e UUIDs simulados. Backup externo criptografado de homologação e restauração isolada aprovados em 22/10/2026; implantação inicial autorizada pelo responsável e realizada pelo Coolify. Consulte as [evidências atuais](validation-producao-2026-10-22.md) e o [bootstrap de produção](bootstrap-producao.md). Rotina recorrente de backup e validação autenticada de produção ainda pendentes.
+
+
+### Recurso efetivo de produção
+
+UUID `oiiuvtwkobgvmjeo9j1odxcp`, nome `certguard-producao`, revisão fixada `93d1f5af0e26f588c2e21b8f039c4f5f4ff9c540`, Compose Raw e auto-deploy desligado. Domínio somente no serviço `web`, porta interna 8080. `SERVICE_PASSWORD_64_DB` fica no recurso Coolify, exclusiva e alfanumérica, usada por banco/API/migrate. Não confundir com a senha do administrador da aplicação.

@@ -24,6 +24,17 @@ Verificações desta sessão, somente leitura:
 5. Realizar bootstrap administrativo por entrada segura e validar autenticação/readiness. Scheduler, retenção, entregas e métricas permanecem desligados conforme configuração inicial, até homologação específica.
 6. Registrar UUID, SHA, evidências e eventual rollback da aplicação, preservando volume/schema. Atualizar documentação somente com resultados efetivamente comprovados.
 
-## Limite atual
+## Situação na primeira inspeção
 
-Produção não foi implantada nesta sessão. Falta acesso autenticado à API do Coolify; foi solicitado somente o caminho do arquivo protegido com token. Nenhuma mudança em DNS, proxy global, infraestrutura compartilhada ou dados foi realizada. Nenhum segredo foi lido ou versionado.
+Na primeira inspeção, produção ainda não havia sido implantada. O acesso à API do Coolify não estava disponível; foi solicitado somente o caminho de arquivo protegido com token. Esse impedimento foi resolvido posteriormente pelo uso dos comandos nativos do Coolify via SSH. Nenhuma mudança em DNS, proxy global, infraestrutura compartilhada ou dados foi realizada. Nenhum segredo foi lido ou versionado.
+
+## Continuação autorizada
+
+Recurso criado pelo responsável: `oiiuvtwkobgvmjeo9j1odxcp`, nome `certguard-producao`, ambiente 8. Consulta pelo bootstrap Laravel do Coolify via SSH confirmou auto-deploy desligado, arquivo de produção correto, porém modo Raw desligado e senha inicial não alfanumérica. Ajustar exclusivamente esse recurso antes da primeira implantação: ativar Raw, substituir senha inicial por aleatória alfanumérica sem exibição e fixar revisão validada. Acesso pelo SSH aos comandos nativos do Coolify elimina a necessidade de provisionar token de API.
+
+Backup desta rodada: dump custom de homologação, criptografado em trânsito pela estação de trabalho, armazenado em diretório exclusivo protegido no frank-note2. Chave de criptografia em arquivo local protegido, separado do servidor de backup; não versionar. Restauração em container PostgreSQL novo, sem rede, sem portas, com dados temporários e limites de CPU/RAM. Conferir schema e contagens sem exibir dados pessoais. Não reutilizar banco real nem remover volumes existentes.
+
+
+## Resultado
+
+Produção implantada pelo Coolify e HTTPS/readiness/isolamento validados em 22/10/2026. Consulte [evidências finais](validation-producao-2026-10-22.md). Bootstrap administrativo e automação operacional permanecem explicitamente pendentes.
